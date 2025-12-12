@@ -48,6 +48,26 @@ export const addRecord = async (record: Record, userId: string): Promise<Record 
   return record;
 };
 
+export const updateRecord = async (record: Record, userId: string): Promise<void> => {
+  const dbRecord = {
+    circle_id: record.circleId,
+    amount: record.amount,
+    date: record.date,
+    note: record.note,
+  };
+
+  const { error } = await supabase
+    .from('records')
+    .update(dbRecord)
+    .eq('id', record.id)
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error updating record:', error);
+    throw error;
+  }
+};
+
 export const deleteRecord = async (recordId: string, userId: string): Promise<void> => {
   const { error } = await supabase
     .from('records')
@@ -158,4 +178,3 @@ export const generateId = (): string => {
 export const getRecords = (userId?: string): Record[] => []; // Deprecated shim
 export const saveRecords = (records: Record[], userId?: string) => {}; // Deprecated shim
 export const getCircles = (userId?: string): Circle[] => []; // Deprecated shim
-// export const saveCircles... // Deprecated shim

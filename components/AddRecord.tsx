@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
-import { Circle, ViewState, Record } from '../types';
-import { ChevronLeft, Calendar, Tag, FileText, Check, Users } from 'lucide-react';
+import { Circle, Record } from '../types';
+import { ChevronLeft, Calendar, FileText, Check, Users } from 'lucide-react';
 import { generateId } from '../services/storageService';
 
 interface AddRecordProps {
@@ -8,9 +9,10 @@ interface AddRecordProps {
   onSave: (record: Record) => void;
   onCancel: () => void;
   initialCircleId?: string;
+  initialRecord?: Record | null; // For editing
 }
 
-const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initialCircleId }) => {
+const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initialCircleId, initialRecord }) => {
   const [amount, setAmount] = useState<string>('');
   const [isWin, setIsWin] = useState<boolean>(true);
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -24,6 +26,17 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
           setCircleId(circles[0].id);
       }
   }, [circles, circleId]);
+
+  // Load initial record data for editing
+  useEffect(() => {
+    if (initialRecord) {
+      setAmount(Math.abs(initialRecord.amount).toString());
+      setIsWin(initialRecord.amount >= 0);
+      setDate(initialRecord.date);
+      setCircleId(initialRecord.circleId);
+      setNote(initialRecord.note || '');
+    }
+  }, [initialRecord]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,16 +53,16 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
 
     const finalAmount = isWin ? Math.abs(numAmount) : -Math.abs(numAmount);
 
-    const newRecord: Record = {
-      id: generateId(),
+    const recordToSave: Record = {
+      id: initialRecord ? initialRecord.id : generateId(), // Reuse ID if editing
       circleId,
       amount: finalAmount,
       date,
       note,
-      timestamp: Date.now()
+      timestamp: initialRecord ? initialRecord.timestamp : Date.now()
     };
 
-    onSave(newRecord);
+    onSave(recordToSave);
   };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,7 +81,9 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
         <button onClick={onCancel} className="p-2 -ml-2 text-gray-500">
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <h2 className="flex-1 text-center font-bold text-lg text-gray-800">记一笔</h2>
+        <h2 className="flex-1 text-center font-bold text-lg text-gray-800">
+            {initialRecord ? '编辑记录' : '记一笔'}
+        </h2>
         <div className="w-10"></div> {/* Spacer for balance */}
       </div>
 
@@ -102,7 +117,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
               value={amount}
               onChange={handleAmountChange}
               className={`w-full text-right pr-4 py-4 bg-gray-50 rounded-2xl text-4xl font-bold outline-none border-2 transition-colors ${error ? 'border-red-300' : 'border-transparent focus:border-mahjong-500'} ${isWin ? 'text-win' : 'text-loss'}`}
-              autoFocus
+              autoFocus={!initialRecord} // Don't auto-focus on edit to avoid jarring jump on mobile
             />
           </div>
           {error && <p className="text-red-500 text-xs">{error}</p>}
@@ -169,7 +184,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
           type="submit"
           className="w-full bg-mahjong-600 hover:bg-mahjong-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-mahjong-500/30 active:scale-[0.98] transition-all flex items-center justify-center"
         >
-          <Check className="w-5 h-5 mr-2" /> 保存
+          <Check className="w-5 h-5 mr-2" /> {initialRecord ? '更新记录' : '保存'}
         </button>
       </form>
     </div>

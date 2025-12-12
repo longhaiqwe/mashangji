@@ -1,16 +1,18 @@
+
 import React, { useMemo, useState } from 'react';
 import { Record, Circle, ViewState } from '../types';
-import { Trash2, Edit2, Filter, Wallet, Calendar, Users } from 'lucide-react';
+import { Trash2, Edit2, Wallet } from 'lucide-react';
 
 interface DashboardProps {
   records: Record[];
   circles: Circle[];
   onDeleteRecord: (id: string) => void;
+  onEditRecord: (record: Record) => void;
   onNavigate: (view: ViewState) => void;
   themeId?: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ records, circles, onDeleteRecord, onNavigate, themeId = 'default' }) => {
+const Dashboard: React.FC<DashboardProps> = ({ records, circles, onDeleteRecord, onEditRecord, onNavigate, themeId = 'default' }) => {
   const [selectedCircleId, setSelectedCircleId] = useState<string>('all');
   
   // Apply glass effect for any theme that isn't the default gray
@@ -148,6 +150,12 @@ const Dashboard: React.FC<DashboardProps> = ({ records, circles, onDeleteRecord,
 
               {/* Actions */}
               <div className="mt-3 pt-3 border-t border-white/10 flex justify-end space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                 <button 
+                  onClick={() => onEditRecord(record)}
+                  className="text-gray-400 hover:text-mahjong-600 flex items-center text-xs"
+                 >
+                   <Edit2 className="w-3 h-3 mr-1" /> 编辑
+                 </button>
                  <button 
                   onClick={() => onDeleteRecord(record.id)}
                   className="text-gray-400 hover:text-red-500 flex items-center text-xs"

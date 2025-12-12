@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Record, Circle, ViewState, UserPreferences, User } from './types';
 import * as Storage from './services/storageService';
@@ -24,6 +25,7 @@ const App: React.FC = () => {
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [isLoading, setIsLoading] = useState(false);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<Record | null>(null);
 
   // Check Auth on Mount & Listen for Changes
   useEffect(() => {
@@ -118,19 +120,30 @@ const App: React.FC = () => {
   }, [user]);
 
   // Data Handlers (Now Async)
-  const handleAddRecord = async (record: Record) => {
+  const handleSaveRecord = async (record: Record) => {
     if (!user) return;
+    
+    // Check if it's an update or new
+    const isUpdate = records.some(r => r.id === record.id);
+    const originalRecords = [...records];
+
     try {
-      // Optimistic Update
-      setRecords([record, ...records]); 
-      setView(ViewState.DASHBOARD);
-      
-      // Sync to DB
-      await Storage.addRecord(record, user.id);
+      if (isUpdate) {
+        // Optimistic Update
+        setRecords(records.map(r => r.id === record.id ? record : r));
+        setView(ViewState.DASHBOARD);
+        await Storage.updateRecord(record, user.id);
+      } else {
+        // Optimistic Add
+        setRecords([record, ...records]); 
+        setView(ViewState.DASHBOARD);
+        await Storage.addRecord(record, user.id);
+      }
+      setEditingRecord(null); // Clear edit state
     } catch (e) {
       alert("保存失败");
-      // Rollback logic could go here
-      setRecords(records); // revert
+      // Rollback
+      setRecords(originalRecords);
     }
   };
 
@@ -146,6 +159,11 @@ const App: React.FC = () => {
         setRecords(originalRecords);
       }
     }
+  };
+
+  const handleEditRecord = (record: Record) => {
+    setEditingRecord(record);
+    setView(ViewState.ADD_RECORD);
   };
 
   const handleUpdateCircles = async (newCircles: Circle[]) => {
@@ -197,9 +215,13 @@ const App: React.FC = () => {
         return (
           <AddRecord 
             circles={circles} 
-            onSave={handleAddRecord} 
-            onCancel={() => setView(ViewState.DASHBOARD)} 
+            onSave={handleSaveRecord} 
+            onCancel={() => {
+                setView(ViewState.DASHBOARD);
+                setEditingRecord(null);
+            }} 
             initialCircleId={circles[0]?.id}
+            initialRecord={editingRecord}
           />
         );
       case ViewState.SETTINGS_CIRCLES:
@@ -243,6 +265,7 @@ const App: React.FC = () => {
             records={records} 
             circles={circles} 
             onDeleteRecord={handleDeleteRecord}
+            onEditRecord={handleEditRecord}
             onNavigate={setView}
             themeId={preferences.themeId}
           />
@@ -266,7 +289,16 @@ const App: React.FC = () => {
       
       {/* Hide navigation on full-screen modes */}
       {view !== ViewState.LOGIN && view !== ViewState.SPLASH && view !== ViewState.ADD_RECORD && (
-        <Navigation currentView={view} onChangeView={setView} />
+        <Navigation 
+            currentView={view} 
+            onChangeView={(v) => {
+                // If manually switching to Add Record (bottom nav), treat as new record
+                if (v === ViewState.ADD_RECORD) {
+                    setEditingRecord(null);
+                }
+                setView(v);
+            }} 
+        />
       )}
     </div>
   );
