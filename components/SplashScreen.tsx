@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { DAILY_QUOTES } from '../constants';
 import { Dice5 } from 'lucide-react';
 
@@ -9,32 +10,26 @@ interface SplashScreenProps {
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish, isReady = true }) => {
   const [quote, setQuote] = useState('');
-  // Use a ref to track the mount time. This persists across re-renders (e.g. when isReady changes).
-  const startTimeRef = useRef(Date.now());
-  // Track if we have already finished to prevent double calls
-  const hasFinishedRef = useRef(false);
+  const [minTimePassed, setMinTimePassed] = useState(false);
 
   useEffect(() => {
     const randomQuote = DAILY_QUOTES[Math.floor(Math.random() * DAILY_QUOTES.length)];
     setQuote(randomQuote);
+
+    // Ensure splash screen shows for at least 2 seconds
+    const timer = setTimeout(() => {
+      setMinTimePassed(true);
+    }, 2000);
+
+    return () => clearTimeout(timer);
   }, []);
 
+  // Trigger finish when both time has passed and app is ready
   useEffect(() => {
-    const minDisplayTime = 2000; // Minimum splash screen time in ms
-
-    const checkRedirect = setInterval(() => {
-      const elapsed = Date.now() - startTimeRef.current;
-      
-      // Only proceed if minimum time passed AND the parent app is ready (auth check done)
-      if (elapsed >= minDisplayTime && isReady && !hasFinishedRef.current) {
-        hasFinishedRef.current = true;
-        clearInterval(checkRedirect);
-        onFinish();
-      }
-    }, 100);
-
-    return () => clearInterval(checkRedirect);
-  }, [onFinish, isReady]);
+    if (minTimePassed && isReady) {
+      onFinish();
+    }
+  }, [minTimePassed, isReady, onFinish]);
 
   return (
     <div 

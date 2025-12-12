@@ -29,10 +29,21 @@ const App: React.FC = () => {
 
   // Check Auth on Mount & Listen for Changes
   useEffect(() => {
+    let mounted = true;
+
+    // Safety timeout: If Supabase takes too long (e.g. network hang), force ready state after 3s
+    // This prevents being stuck on Splash screen forever
+    const safetyTimer = setTimeout(() => {
+      if (mounted) {
+        console.warn("Auth check timed out - forcing ready state");
+        setAuthInitialized(true);
+      }
+    }, 3000);
+
     // 1. Check active session
     authService.getCurrentUser()
       .then((currentUser) => {
-        if (currentUser) {
+        if (currentUser && mounted) {
             setUser(currentUser);
         }
       })
@@ -40,31 +51,41 @@ const App: React.FC = () => {
         console.warn("Auth check failed:", err);
       })
       .finally(() => {
-        // ALWAYS set initialized to true, even on error, so Splash stops
-        setAuthInitialized(true);
+        if (mounted) {
+            setAuthInitialized(true);
+            clearTimeout(safetyTimer);
+        }
       });
 
     // 2. Listen for auth changes (e.g. login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (!mounted) return;
+
         if (event === 'SIGNED_IN' && session?.user) {
              try {
                 const appUser = await authService.getCurrentUser();
-                setUser(appUser);
-                // If we were on login screen, move to dashboard (skip splash if explicit login)
-                setView(current => current === ViewState.LOGIN ? ViewState.DASHBOARD : current);
+                if (mounted) {
+                    setUser(appUser);
+                    // If we were on login screen, move to dashboard (skip splash if explicit login)
+                    setView(current => current === ViewState.LOGIN ? ViewState.DASHBOARD : current);
+                }
              } catch (e) {
                 console.error("Error fetching user details after sign in", e);
              }
         } else if (event === 'SIGNED_OUT') {
-             setUser(null);
-             setView(ViewState.LOGIN);
-             setRecords([]);
-             setCircles([]);
-             setPreferences(DEFAULT_PREFERENCES);
+             if (mounted) {
+                setUser(null);
+                setView(ViewState.LOGIN);
+                setRecords([]);
+                setCircles([]);
+                setPreferences(DEFAULT_PREFERENCES);
+             }
         }
     });
 
     return () => {
+        mounted = false;
+        clearTimeout(safetyTimer);
         subscription.unsubscribe();
     };
   }, []);
