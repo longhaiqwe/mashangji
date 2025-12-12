@@ -22,7 +22,6 @@ export interface User {
 
 export enum ViewState {
   LOGIN = 'LOGIN',
-  SPLASH = 'SPLASH',
   DASHBOARD = 'DASHBOARD',
   ADD_RECORD = 'ADD_RECORD',
   STATS = 'STATS',

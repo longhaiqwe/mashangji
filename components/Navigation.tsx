@@ -26,7 +26,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onChangeView }) =>
   ];
 
   return (
-    <div className="bg-white/90 backdrop-blur-md border-t border-gray-200 pb-safe-bottom relative z-20">
+    <div className="bg-white/90 backdrop-blur-md border-t border-gray-200 pb-[env(safe-area-inset-bottom)] relative z-20">
       <div className="flex justify-around items-end h-16 pb-1">
         {navItems.map((item) => {
           const isActive = activeView === item.view;

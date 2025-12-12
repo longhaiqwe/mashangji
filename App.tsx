@@ -1,10 +1,9 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Record, Circle, ViewState, UserPreferences, User } from './types';
 import * as Storage from './services/storageService';
 import { authService } from './services/authService';
 import { DEFAULT_PREFERENCES, DEFAULT_CIRCLES } from './constants';
-import SplashScreen from './components/SplashScreen';
 import Dashboard from './components/Dashboard';
 import AddRecord from './components/AddRecord';
 import Navigation from './components/Navigation';
@@ -17,28 +16,18 @@ import { supabase } from './services/supabase';
 
 const App: React.FC = () => {
   // State
-  // Default to SPLASH so it flashes on every load
+  // Default to LOGIN directly
   const [user, setUser] = useState<User | null>(null);
-  const [view, setView] = useState<ViewState>(ViewState.SPLASH); 
+  const [view, setView] = useState<ViewState>(ViewState.LOGIN); 
   const [records, setRecords] = useState<Record[]>([]);
   const [circles, setCircles] = useState<Circle[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [isLoading, setIsLoading] = useState(false);
-  const [authInitialized, setAuthInitialized] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Record | null>(null);
 
   // Check Auth on Mount & Listen for Changes
   useEffect(() => {
     let mounted = true;
-
-    // Safety timeout: If Supabase takes too long (e.g. network hang), force ready state after 3s
-    // This prevents being stuck on Splash screen forever
-    const safetyTimer = setTimeout(() => {
-      if (mounted) {
-        console.warn("Auth check timed out - forcing ready state");
-        setAuthInitialized(true);
-      }
-    }, 3000);
 
     // 1. Check active session
     authService.getCurrentUser()
@@ -49,12 +38,6 @@ const App: React.FC = () => {
       })
       .catch((err) => {
         console.warn("Auth check failed:", err);
-      })
-      .finally(() => {
-        if (mounted) {
-            setAuthInitialized(true);
-            clearTimeout(safetyTimer);
-        }
       });
 
     // 2. Listen for auth changes (e.g. login, logout, token refresh)
@@ -66,7 +49,7 @@ const App: React.FC = () => {
                 const appUser = await authService.getCurrentUser();
                 if (mounted) {
                     setUser(appUser);
-                    // If we were on login screen, move to dashboard (skip splash if explicit login)
+                    // If we were on login screen, move to dashboard
                     setView(current => current === ViewState.LOGIN ? ViewState.DASHBOARD : current);
                 }
              } catch (e) {
@@ -85,10 +68,17 @@ const App: React.FC = () => {
 
     return () => {
         mounted = false;
-        clearTimeout(safetyTimer);
         subscription.unsubscribe();
     };
   }, []);
+
+  // Handle Late User Loading: 
+  // If the auth check succeeds later, automatically switch to Dashboard.
+  useEffect(() => {
+    if (user && view === ViewState.LOGIN) {
+      setView(ViewState.DASHBOARD);
+    }
+  }, [user, view]);
 
   // Load Data from Supabase when User Changes
   useEffect(() => {
@@ -109,7 +99,6 @@ const App: React.FC = () => {
         setPreferences(loadedPrefs);
       } catch (error) {
         console.error("Failed to sync data", error);
-        // Don't alert here immediately on splash load to avoid disrupting UX
       } finally {
         setIsLoading(false);
       }
@@ -130,17 +119,7 @@ const App: React.FC = () => {
     await authService.logout(); 
   };
 
-  // Called automatically by SplashScreen when timer ends AND auth is ready
-  // Wrapped in useCallback to ensure stability
-  const handleSplashFinish = useCallback(() => {
-    if (user) {
-      setView(ViewState.DASHBOARD);
-    } else {
-      setView(ViewState.LOGIN);
-    }
-  }, [user]);
-
-  // Data Handlers (Now Async)
+  // Data Handlers
   const handleSaveRecord = async (record: Record) => {
     if (!user) return;
     
@@ -230,8 +209,6 @@ const App: React.FC = () => {
     switch (view) {
       case ViewState.LOGIN:
         return <Login onLoginSuccess={handleLoginSuccess} />;
-      case ViewState.SPLASH:
-        return <SplashScreen onFinish={handleSplashFinish} isReady={authInitialized} />;
       case ViewState.ADD_RECORD:
         return (
           <AddRecord 
@@ -300,7 +277,7 @@ const App: React.FC = () => {
       style={getBackgroundStyle()}
     >
       <div className="flex-1 overflow-hidden relative">
-        {isLoading && view !== ViewState.LOGIN && view !== ViewState.SPLASH && (
+        {isLoading && view !== ViewState.LOGIN && (
             <div className="absolute top-0 left-0 right-0 z-50 h-1 bg-gray-200 overflow-hidden">
                 <div className="h-full bg-mahjong-500 animate-pulse w-full origin-left transform scale-x-50"></div>
             </div>
@@ -309,7 +286,7 @@ const App: React.FC = () => {
       </div>
       
       {/* Hide navigation on full-screen modes */}
-      {view !== ViewState.LOGIN && view !== ViewState.SPLASH && view !== ViewState.ADD_RECORD && (
+      {view !== ViewState.LOGIN && view !== ViewState.ADD_RECORD && (
         <Navigation 
             currentView={view} 
             onChangeView={(v) => {
