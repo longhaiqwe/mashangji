@@ -18,7 +18,7 @@ const App: React.FC = () => {
   // State
   // Default to LOGIN directly
   const [user, setUser] = useState<User | null>(null);
-  const [view, setView] = useState<ViewState>(ViewState.LOGIN); 
+  const [view, setView] = useState<ViewState>(ViewState.LOGIN);
   const [records, setRecords] = useState<Record[]>([]);
   const [circles, setCircles] = useState<Circle[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
@@ -33,7 +33,7 @@ const App: React.FC = () => {
     authService.getCurrentUser()
       .then((currentUser) => {
         if (currentUser && mounted) {
-            setUser(currentUser);
+          setUser(currentUser);
         }
       })
       .catch((err) => {
@@ -42,33 +42,33 @@ const App: React.FC = () => {
 
     // 2. Listen for auth changes (e.g. login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (!mounted) return;
+      if (!mounted) return;
 
-        if (event === 'SIGNED_IN' && session?.user) {
-             try {
-                const appUser = await authService.getCurrentUser();
-                if (mounted) {
-                    setUser(appUser);
-                    // If we were on login screen, move to dashboard
-                    setView(current => current === ViewState.LOGIN ? ViewState.DASHBOARD : current);
-                }
-             } catch (e) {
-                console.error("Error fetching user details after sign in", e);
-             }
-        } else if (event === 'SIGNED_OUT') {
-             if (mounted) {
-                setUser(null);
-                setView(ViewState.LOGIN);
-                setRecords([]);
-                setCircles([]);
-                setPreferences(DEFAULT_PREFERENCES);
-             }
+      if (event === 'SIGNED_IN' && session?.user) {
+        try {
+          const appUser = await authService.getCurrentUser();
+          if (mounted) {
+            setUser(appUser);
+            // If we were on login screen, move to dashboard
+            setView(current => current === ViewState.LOGIN ? ViewState.DASHBOARD : current);
+          }
+        } catch (e) {
+          console.error("Error fetching user details after sign in", e);
         }
+      } else if (event === 'SIGNED_OUT') {
+        if (mounted) {
+          setUser(null);
+          setView(ViewState.LOGIN);
+          setRecords([]);
+          setCircles([]);
+          setPreferences(DEFAULT_PREFERENCES);
+        }
+      }
     });
 
     return () => {
-        mounted = false;
-        subscription.unsubscribe();
+      mounted = false;
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -84,7 +84,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       if (!user) return;
-      
+
       setIsLoading(true);
       try {
         const [loadedRecords, loadedCircles, loadedPrefs] = await Promise.all([
@@ -116,13 +116,13 @@ const App: React.FC = () => {
   };
 
   const handleLogout = async () => {
-    await authService.logout(); 
+    await authService.logout();
   };
 
   // Data Handlers
   const handleSaveRecord = async (record: Record) => {
     if (!user) return;
-    
+
     // Check if it's an update or new
     const isUpdate = records.some(r => r.id === record.id);
     const originalRecords = [...records];
@@ -135,7 +135,7 @@ const App: React.FC = () => {
         await Storage.updateRecord(record, user.id);
       } else {
         // Optimistic Add
-        setRecords([record, ...records]); 
+        setRecords([record, ...records]);
         setView(ViewState.DASHBOARD);
         await Storage.addRecord(record, user.id);
       }
@@ -211,22 +211,22 @@ const App: React.FC = () => {
         return <Login onLoginSuccess={handleLoginSuccess} />;
       case ViewState.ADD_RECORD:
         return (
-          <AddRecord 
-            circles={circles} 
-            onSave={handleSaveRecord} 
+          <AddRecord
+            circles={circles}
+            onSave={handleSaveRecord}
             onCancel={() => {
-                setView(ViewState.DASHBOARD);
-                setEditingRecord(null);
-            }} 
+              setView(ViewState.DASHBOARD);
+              setEditingRecord(null);
+            }}
             initialCircleId={circles[0]?.id}
             initialRecord={editingRecord}
           />
         );
       case ViewState.SETTINGS_CIRCLES:
         return (
-          <CircleManager 
-            circles={circles} 
-            onUpdateCircles={handleUpdateCircles} 
+          <CircleManager
+            circles={circles}
+            onUpdateCircles={handleUpdateCircles}
             onNavigate={setView}
             hasRecords={hasRecordsInCircle}
             onBack={() => setView(ViewState.SETTINGS)}
@@ -235,23 +235,23 @@ const App: React.FC = () => {
       case ViewState.SETTINGS_THEME:
         return (
           <ThemeSettings
-             preferences={preferences}
-             onUpdatePreferences={handleUpdatePreferences}
-             onNavigate={setView}
+            preferences={preferences}
+            onUpdatePreferences={handleUpdatePreferences}
+            onNavigate={setView}
           />
         );
       case ViewState.STATS:
         return (
-          <Statistics 
-            records={records} 
+          <Statistics
+            records={records}
             circles={circles}
             themeId={preferences.themeId}
           />
         );
       case ViewState.SETTINGS:
         return (
-          <Settings 
-            onNavigate={setView} 
+          <Settings
+            onNavigate={setView}
             user={user}
             onLogout={handleLogout}
           />
@@ -259,9 +259,9 @@ const App: React.FC = () => {
       case ViewState.DASHBOARD:
       default:
         return (
-          <Dashboard 
-            records={records} 
-            circles={circles} 
+          <Dashboard
+            records={records}
+            circles={circles}
             onDeleteRecord={handleDeleteRecord}
             onEditRecord={handleEditRecord}
             onNavigate={setView}
@@ -272,30 +272,30 @@ const App: React.FC = () => {
   };
 
   return (
-    <div 
-      className="h-full flex flex-col max-w-md mx-auto shadow-2xl overflow-hidden relative transition-all duration-500 ease-in-out"
+    <div
+      className="h-full flex flex-col max-w-md mx-auto shadow-2xl overflow-hidden relative transition-all duration-500 ease-in-out pt-[env(safe-area-inset-top)]"
       style={getBackgroundStyle()}
     >
       <div className="flex-1 overflow-hidden relative">
         {isLoading && view !== ViewState.LOGIN && (
-            <div className="absolute top-0 left-0 right-0 z-50 h-1 bg-gray-200 overflow-hidden">
-                <div className="h-full bg-mahjong-500 animate-pulse w-full origin-left transform scale-x-50"></div>
-            </div>
+          <div className="absolute top-0 left-0 right-0 z-50 h-1 bg-gray-200 overflow-hidden">
+            <div className="h-full bg-mahjong-500 animate-pulse w-full origin-left transform scale-x-50"></div>
+          </div>
         )}
         {renderContent()}
       </div>
-      
+
       {/* Hide navigation on full-screen modes */}
       {view !== ViewState.LOGIN && view !== ViewState.ADD_RECORD && (
-        <Navigation 
-            currentView={view} 
-            onChangeView={(v) => {
-                // If manually switching to Add Record (bottom nav), treat as new record
-                if (v === ViewState.ADD_RECORD) {
-                    setEditingRecord(null);
-                }
-                setView(v);
-            }} 
+        <Navigation
+          currentView={view}
+          onChangeView={(v) => {
+            // If manually switching to Add Record (bottom nav), treat as new record
+            if (v === ViewState.ADD_RECORD) {
+              setEditingRecord(null);
+            }
+            setView(v);
+          }}
         />
       )}
     </div>
