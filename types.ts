@@ -39,5 +39,5 @@ export interface SummaryStats {
 
 export interface UserPreferences {
   backgroundImage?: string; // Data URL or null
-  themeId: 'default' | 'green' | 'red' | 'custom';
+  themeId: 'default' | 'green' | 'red' | 'black' | 'blue' | 'custom';
 }

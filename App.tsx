@@ -195,9 +195,13 @@ const App: React.FC = () => {
     }
     switch (preferences.themeId) {
       case 'green':
-        return { background: 'linear-gradient(to bottom right, #166534, #16a34a)' };
+        return { background: 'linear-gradient(to bottom right, #166534, #15803d, #14532d)' }; // Deeper Green
       case 'red':
-        return { background: 'linear-gradient(to bottom right, #b91c1c, #ea580c)' };
+        return { background: 'linear-gradient(to bottom right, #991b1b, #b91c1c, #9a3412)' }; // Richer Red
+      case 'black':
+        return { background: 'linear-gradient(to bottom right, #18181b, #27272a, #3f3f46)' }; // Elegant Black
+      case 'blue':
+        return { background: 'linear-gradient(to bottom right, #1e3a8a, #1d4ed8, #2563eb)' }; // Zen Blue
       case 'default':
       default:
         return { backgroundColor: '#f9fafb' };
