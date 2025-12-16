@@ -12,6 +12,7 @@ import Statistics from './components/Statistics';
 import Settings from './components/Settings';
 import ThemeSettings from './components/ThemeSettings';
 import Login from './components/Login';
+import LoadingScreen from './components/LoadingScreen';
 import { supabase } from './services/supabase';
 
 const App: React.FC = () => {
@@ -23,37 +24,58 @@ const App: React.FC = () => {
   const [circles, setCircles] = useState<Circle[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true); // New: Block UI until auth check is done
   const [editingRecord, setEditingRecord] = useState<Record | null>(null);
 
   // Check Auth on Mount & Listen for Changes
   useEffect(() => {
     let mounted = true;
 
-    // 1. Check active session
-    authService.getCurrentUser()
-      .then((currentUser) => {
-        if (currentUser && mounted) {
-          setUser(currentUser);
+    const initAuth = async () => {
+      try {
+        // 1. Check active session
+        const currentUser = await authService.getCurrentUser();
+        if (mounted) {
+          if (currentUser) {
+            setUser(currentUser);
+            setView(ViewState.DASHBOARD);
+          }
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         console.warn("Auth check failed:", err);
-      });
+      } finally {
+        if (mounted) {
+          setIsInitializing(false);
+        }
+      }
+    };
+
+    initAuth();
+
+    // Failsafe: Force initialization to finish after 3s max
+    const timer = setTimeout(() => {
+      if (mounted) setIsInitializing(false);
+    }, 3000);
 
     // 2. Listen for auth changes (e.g. login, logout, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
 
       if (event === 'SIGNED_IN' && session?.user) {
+        // ... (existing logic)
         try {
+          // We might already have user from initAuth, but this ensures safe updates
+          // If it's the initial event, it might double-fire with initAuth, but React handles state dedup.
           const appUser = await authService.getCurrentUser();
           if (mounted) {
             setUser(appUser);
-            // If we were on login screen, move to dashboard
             setView(current => current === ViewState.LOGIN ? ViewState.DASHBOARD : current);
+            // Ensure loading is off if we just signed in
+            setIsLoading(false);
           }
         } catch (e) {
-          console.error("Error fetching user details after sign in", e);
+          console.error("Error fetching user details", e);
+          if (mounted) setIsLoading(false);
         }
       } else if (event === 'SIGNED_OUT') {
         if (mounted) {
@@ -62,6 +84,7 @@ const App: React.FC = () => {
           setRecords([]);
           setCircles([]);
           setPreferences(DEFAULT_PREFERENCES);
+          setIsLoading(false);
         }
       }
     });
@@ -72,13 +95,8 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Handle Late User Loading: 
-  // If the auth check succeeds later, automatically switch to Dashboard.
-  useEffect(() => {
-    if (user && view === ViewState.LOGIN) {
-      setView(ViewState.DASHBOARD);
-    }
-  }, [user, view]);
+  // Handle Late User Loading removed - logic is now in initAuth
+
 
   // Load Data from Supabase when User Changes
   useEffect(() => {
@@ -107,12 +125,17 @@ const App: React.FC = () => {
     if (user) {
       loadData();
     }
-  }, [user]);
+  }, [user?.id]); // Only reload if user ID changes
 
   // Auth Handlers
   const handleLoginSuccess = (loggedInUser: User) => {
+    // Rely on onAuthStateChange to set the user and trigger data loading
+    // BUT we also set it here to ensure UI responsiveness and fail-safe
+    // independent of the event listener latency.
+    // The useEffect [user?.id] dependency prevents duplicate data fetching.
+    setIsLoading(true);
     setUser(loggedInUser);
-    setView(ViewState.DASHBOARD); // Directly to dashboard after manual login
+    setView(ViewState.DASHBOARD);
   };
 
   const handleLogout = async () => {
@@ -288,16 +311,15 @@ const App: React.FC = () => {
       style={getBackgroundStyle()}
     >
       <div className="flex-1 overflow-hidden relative">
-        {isLoading && view !== ViewState.LOGIN && (
-          <div className="absolute top-0 left-0 right-0 z-50 h-1 bg-gray-200 overflow-hidden">
-            <div className="h-full bg-mahjong-500 animate-pulse w-full origin-left transform scale-x-50"></div>
-          </div>
+        {isInitializing ? (
+          <LoadingScreen isVisible={true} />
+        ) : (
+          renderContent()
         )}
-        {renderContent()}
       </div>
 
       {/* Hide navigation on full-screen modes */}
-      {view !== ViewState.LOGIN && view !== ViewState.ADD_RECORD && (
+      {!isInitializing && view !== ViewState.LOGIN && view !== ViewState.ADD_RECORD && (
         <Navigation
           currentView={view}
           onChangeView={(v) => {
@@ -309,6 +331,7 @@ const App: React.FC = () => {
           }}
         />
       )}
+      <LoadingScreen isVisible={isLoading && view !== ViewState.LOGIN} />
     </div>
   );
 };
