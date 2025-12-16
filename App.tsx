@@ -89,9 +89,23 @@ const App: React.FC = () => {
       }
     });
 
+    // 3. Clear storage on page unload to achieve "ephemeral session"
+    const handleUnload = () => {
+      // Clear Supabase tokens when user leaves/refreshes
+      if (typeof window !== 'undefined' && window.localStorage) {
+        Object.keys(window.localStorage).forEach((key) => {
+          if (key.startsWith('sb-')) {
+            window.localStorage.removeItem(key);
+          }
+        });
+      }
+    };
+    window.addEventListener('beforeunload', handleUnload);
+
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      window.removeEventListener('beforeunload', handleUnload);
     };
   }, []);
 
