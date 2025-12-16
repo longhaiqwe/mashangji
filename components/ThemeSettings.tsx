@@ -36,6 +36,7 @@ const ThemeSettings: React.FC<ThemeSettingsProps> = ({ preferences, onUpdatePref
     { id: 'red', name: '喜庆红', color: 'bg-red-700', preview: 'bg-gradient-to-br from-[#991b1b] to-[#9a3412]' },
     { id: 'black', name: '至尊黑', color: 'bg-zinc-900', preview: 'bg-gradient-to-br from-zinc-800 to-zinc-950' },
     { id: 'blue', name: '禅意蓝', color: 'bg-blue-900', preview: 'bg-gradient-to-br from-blue-800 to-blue-950' },
+    { id: 'rich', name: '招财进宝', color: 'bg-red-600', preview: "bg-[url('/bg_rich.jpg')] bg-cover bg-top" },
   ];
 
   return (

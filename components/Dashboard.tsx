@@ -47,9 +47,11 @@ const Dashboard: React.FC<DashboardProps> = ({ records, circles, onDeleteRecord,
   };
 
   // Header styles based on theme
-  const headerClass = isCustomTheme
-    ? 'bg-black/20 backdrop-blur-xl border-b border-white/10 pt-10'
-    : 'bg-mahjong-800/95 backdrop-blur-md shadow-lg pt-10';
+  const headerClass = themeId === 'rich'
+    ? 'bg-black/30 backdrop-blur-[2px] pt-10 shadow-sm' // Subtle overlay for contrast
+    : isCustomTheme
+      ? 'bg-black/20 backdrop-blur-xl border-b border-white/10 pt-10'
+      : 'bg-mahjong-800/95 backdrop-blur-md shadow-lg pt-10';
 
   const headerTextLabelClass = isCustomTheme ? 'text-white/80' : 'text-emerald-100';
   const headerTextValueClass = isCustomTheme ? 'text-white' : (currentMonthStats >= 0 ? 'text-white' : 'text-emerald-200');

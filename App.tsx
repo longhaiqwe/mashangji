@@ -202,6 +202,13 @@ const App: React.FC = () => {
         return { background: 'linear-gradient(to bottom right, #18181b, #27272a, #3f3f46)' }; // Elegant Black
       case 'blue':
         return { background: 'linear-gradient(to bottom right, #1e3a8a, #1d4ed8, #2563eb)' }; // Zen Blue
+      case 'rich':
+        return {
+          backgroundImage: `url('/bg_rich.jpg')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'top center',
+          backgroundRepeat: 'no-repeat'
+        };
       case 'default':
       default:
         return { backgroundColor: '#f9fafb' };
