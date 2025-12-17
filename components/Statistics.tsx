@@ -235,6 +235,72 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
     return { start: lastWeekStart, end: lastWeekEnd };
   };
 
+  const insights = useMemo(() => {
+    const targetYear = currentDate.getFullYear();
+    const yearRecords = records.filter(r => {
+      const d = new Date(r.date);
+      return d.getFullYear() === targetYear;
+    });
+    const totalGames = yearRecords.length;
+    const wins = yearRecords.filter(r => r.amount > 0).length;
+    const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+    const net = yearRecords.reduce((acc, r) => acc + r.amount, 0);
+    let maxWinAmount = 0;
+    let maxWinDate = '';
+    let maxLossAmount = 0;
+    let maxLossDate = '';
+    yearRecords.forEach(r => {
+      if (r.amount > maxWinAmount) {
+        maxWinAmount = r.amount;
+        maxWinDate = r.date;
+      }
+      if (r.amount < maxLossAmount) {
+        maxLossAmount = r.amount;
+        maxLossDate = r.date;
+      }
+    });
+    const monthlyTotals = Array.from({ length: 12 }, () => 0);
+    yearRecords.forEach(r => {
+      const m = new Date(r.date).getMonth();
+      monthlyTotals[m] += r.amount;
+    });
+    const bestMonthIndex = monthlyTotals.reduce((best, val, idx) => (val > monthlyTotals[best] ? idx : best), 0);
+    const worstMonthIndex = monthlyTotals.reduce((worst, val, idx) => (val < monthlyTotals[worst] ? idx : worst), 0);
+    const january = monthlyTotals[0];
+    const december = monthlyTotals[11];
+    const positives = monthlyTotals
+      .map((v, i) => ({ v, i }))
+      .filter(x => x.v > 0 && x.i !== bestMonthIndex)
+      .map(x => `${x.i + 1}月`);
+    const monthlyRecap: string[] = [];
+    if (january < 0) {
+      monthlyRecap.push(`开局不利（1月）：亏损 ${Math.abs(january)}`);
+    }
+    if (monthlyTotals[bestMonthIndex] > 0) {
+      monthlyRecap.push(`强劲反弹（${bestMonthIndex + 1}月）：单月盈利 ${monthlyTotals[bestMonthIndex]}`);
+    }
+    if (positives.length > 0) {
+      monthlyRecap.push(`稳定输出：${positives.join('、')}为正收益月`);
+    }
+    if (december < 0) {
+      monthlyRecap.push(`年末震荡：12月亏损 ${Math.abs(december)}`);
+    }
+    return {
+      year: targetYear,
+      totalGames,
+      wins,
+      winRate,
+      net,
+      maxWinAmount,
+      maxWinDate,
+      maxLossAmount,
+      maxLossDate,
+      worstMonthIndex,
+      bestMonthIndex,
+      monthlyRecap
+    };
+  }, [records, currentDate]);
+
   const fortune = useMemo(() => {
     // Only calculate fortune if we are in 'month' or 'week' view, or broadly available
     // Let's make it available based on "This Week" vs "Last Week" relative to *today* (real time), 
@@ -369,6 +435,55 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
       </div>
 
       <div className="p-4 space-y-4 overflow-y-auto">
+        {timeRange === 'year' && (
+          <div className={`rounded-2xl p-4 shadow-sm border transition-colors ${isCustomTheme ? 'bg-black/20 border-white/10' : 'bg-white/90 border-gray-100'
+            }`}>
+            <div className="flex items-center justify-between">
+              <h3 className={`font-bold text-base ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>数据洞察</h3>
+              <span className={`text-xs ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>{insights.year} 年度</span>
+            </div>
+            {insights.totalGames === 0 ? (
+              <div className={`h-20 flex items-center justify-center text-sm ${isCustomTheme ? 'text-white/40' : 'text-gray-400'}`}>
+                暂无数据
+              </div>
+            ) : (
+              <>
+                <div className={`mt-3 grid grid-cols-2 gap-3`}>
+                  <div className={`backdrop-blur-sm rounded-xl p-3 border ${isCustomTheme ? 'bg-black/10 border-white/10' : 'bg-white border-gray-100'}`}>
+                    <div className={`text-xs ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>总场次</div>
+                    <div className={`text-xl font-bold ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>{insights.totalGames}</div>
+                  </div>
+                  <div className={`backdrop-blur-sm rounded-xl p-3 border ${isCustomTheme ? 'bg-black/10 border-white/10' : 'bg-white border-gray-100'}`}>
+                    <div className={`text-xs ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>获胜场次</div>
+                    <div className={`text-xl font-bold ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>{insights.wins} <span className={`text-xs font-normal ${isCustomTheme ? 'text-white/40' : 'text-gray-400'}`}>胜率 {insights.winRate}%</span></div>
+                  </div>
+                  <div className={`backdrop-blur-sm rounded-xl p-3 border col-span-2 ${isCustomTheme ? 'bg-black/10 border-white/10' : 'bg-white border-gray-100'}`}>
+                    <div className={`text-xs ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>总盈利(Net)</div>
+                    <div className={`text-2xl font-bold ${insights.net >= 0 ? 'text-red-500' : 'text-green-600'}`}>{insights.net > 0 ? `+${insights.net}` : `${insights.net}`}</div>
+                  </div>
+                  <div className={`backdrop-blur-sm rounded-xl p-3 border ${isCustomTheme ? 'bg-black/10 border-white/10' : 'bg-white border-gray-100'}`}>
+                    <div className={`text-xs ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>最大单笔赢</div>
+                    <div className={`text-lg font-bold ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>{insights.maxWinAmount > 0 ? `+${insights.maxWinAmount}` : '—'}</div>
+                    <div className={`text-xs ${isCustomTheme ? 'text-white/40' : 'text-gray-400'}`}>{insights.maxWinDate || ''}</div>
+                  </div>
+                  <div className={`backdrop-blur-sm rounded-xl p-3 border ${isCustomTheme ? 'bg-black/10 border-white/10' : 'bg-white border-gray-100'}`}>
+                    <div className={`text-xs ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>最大单笔亏损</div>
+                    <div className={`text-lg font-bold ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>{insights.maxLossAmount < 0 ? `${insights.maxLossAmount}` : '—'}</div>
+                    <div className={`text-xs ${isCustomTheme ? 'text-white/40' : 'text-gray-400'}`}>{insights.maxLossDate || ''}</div>
+                  </div>
+                </div>
+                <div className={`mt-4`}>
+                  <div className={`font-bold text-sm mb-2 ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>月度表现复盘</div>
+                  <ul className={`space-y-1 text-sm ${isCustomTheme ? 'text-white/80' : 'text-gray-700'}`}>
+                    {insights.monthlyRecap.map((t, idx) => (
+                      <li key={idx} className="leading-tight">• {t}</li>
+                    ))}
+                  </ul>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Fortune Card - Dynamic "Yun Shi" */}
         <div className={`rounded-xl p-4 shadow-sm border relative overflow-hidden transition-colors ${isCustomTheme ? 'bg-black/20 border-white/10' : 'bg-white/90 border-gray-100 text-gray-800'
