@@ -116,7 +116,7 @@ const ThemeSettings: React.FC<ThemeSettingsProps> = ({ preferences, onUpdatePref
 
         <p className="text-xs text-gray-400 mt-6 text-center">
           提示：上传您喜欢的图片作为背景（建议竖屏图片）。<br />
-          图片仅保存在您当前设备上。
+          背景图将随账号偏好同步至云端，仅用于展示。
         </p>
       </div>
     </div>

@@ -486,31 +486,31 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
         )}
 
         {/* Fortune Card - Dynamic "Yun Shi" */}
-        <div className={`rounded-xl p-4 shadow-sm border relative overflow-hidden transition-colors ${isCustomTheme ? 'bg-black/20 border-white/10' : 'bg-white/90 border-gray-100 text-gray-800'
-          }`}>
-          {/* Decorative Background Element */}
-          <div className={`absolute top-0 right-0 p-3 opacity-10 pointer-events-none`}>
-            <span className="text-6xl">
-              {fortune.type === 'good' ? '🧧' : fortune.type === 'bad' ? '🌧️' : fortune.type === 'warning' ? '⚡️' : '🍵'}
-            </span>
-          </div>
-
-          <div className="relative z-10 flex items-start justify-between">
-            <div>
-              <div className={`text-xs mb-1 font-medium ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>本周运势</div>
-              <h3 className={`text-xl font-bold mb-1 ${fortune.type === 'good' ? 'text-red-500' :
-                fortune.type === 'bad' ? 'text-green-600' :
-                  fortune.type === 'warning' ? 'text-orange-500' :
-                    (isCustomTheme ? 'text-white' : 'text-gray-700')
-                }`}>
-                {fortune.title}
-              </h3>
-              <p className={`text-xs ${isCustomTheme ? 'text-white/70' : 'text-gray-500'}`}>
-                {fortune.description}
-              </p>
+        {timeRange === 'week' && (
+          <div className={`rounded-xl p-4 shadow-sm border relative overflow-hidden transition-colors ${isCustomTheme ? 'bg-black/20 border-white/10' : 'bg-white/90 border-gray-100 text-gray-800'
+            }`}>
+            <div className={`absolute top-0 right-0 p-3 opacity-10 pointer-events-none`}>
+              <span className="text-6xl">
+                {fortune.type === 'good' ? '🧧' : fortune.type === 'bad' ? '🌧️' : fortune.type === 'warning' ? '⚡️' : '🍵'}
+              </span>
+            </div>
+            <div className="relative z-10 flex items-start justify-between">
+              <div>
+                <div className={`text-xs mb-1 font-medium ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>本周运势</div>
+                <h3 className={`text-xl font-bold mb-1 ${fortune.type === 'good' ? 'text-red-500' :
+                  fortune.type === 'bad' ? 'text-green-600' :
+                    fortune.type === 'warning' ? 'text-orange-500' :
+                      (isCustomTheme ? 'text-white' : 'text-gray-700')
+                  }`}>
+                  {fortune.title}
+                </h3>
+                <p className={`text-xs ${isCustomTheme ? 'text-white/70' : 'text-gray-500'}`}>
+                  {fortune.description}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Overview Cards */}
         <div className="grid grid-cols-2 gap-3">

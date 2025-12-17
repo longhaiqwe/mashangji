@@ -105,7 +105,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
           <div>
             <h3 className="text-xs font-bold text-gray-600 mb-1">关于麻上记</h3>
             <p className="text-xs text-gray-500 leading-relaxed">
-              一款极简的个人麻将记账工具。数据通过本地账号隔离，保障隐私。
+              一款极简的个人麻将记账工具。数据存储于云端并按账号隔离，保障隐私。
               <br/>
               Version 1.1.2
             </p>
