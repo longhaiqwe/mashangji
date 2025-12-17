@@ -157,27 +157,56 @@ const App: React.FC = () => {
   };
 
   // Data Handlers
-  const handleSaveRecord = async (record: Record) => {
+  const handleSaveRecord = async (recordOrRecords: Record | Record[]) => {
     if (!user) return;
 
-    // Check if it's an update or new
-    const isUpdate = records.some(r => r.id === record.id);
+    const newRecords = Array.isArray(recordOrRecords) ? recordOrRecords : [recordOrRecords];
     const originalRecords = [...records];
-
+    
+    // Check if it's an update or new (assuming batch is always new for now, but safe to check)
+    // Actually, batch import from AI will always be new records with new IDs.
+    // But for robustness, let's handle mixed cases if needed (though unlikely here).
+    
     try {
-      if (isUpdate) {
-        // Optimistic Update
-        setRecords(records.map(r => r.id === record.id ? record : r));
-        setView(ViewState.DASHBOARD);
-        await Storage.updateRecord(record, user.id);
-      } else {
-        // Optimistic Add
-        setRecords([record, ...records]);
-        setView(ViewState.DASHBOARD);
-        await Storage.addRecord(record, user.id);
+      // Optimistic Update
+      let updatedRecords = [...records];
+      
+      for (const record of newRecords) {
+        const isUpdate = records.some(r => r.id === record.id);
+        if (isUpdate) {
+            updatedRecords = updatedRecords.map(r => r.id === record.id ? record : r);
+        } else {
+            updatedRecords = [record, ...updatedRecords];
+        }
       }
+      
+      // Sort by timestamp desc
+      updatedRecords.sort((a, b) => b.timestamp - a.timestamp);
+      
+      setRecords(updatedRecords);
+      setView(ViewState.DASHBOARD);
+
+      // Persist to DB
+      const recordsToAdd: Record[] = [];
+      
+      for (const record of newRecords) {
+         const isUpdate = originalRecords.some(r => r.id === record.id);
+         if (isUpdate) {
+             // For updates, we still do them one by one as they might be sparse
+             await Storage.updateRecord(record, user.id);
+         } else {
+             recordsToAdd.push(record);
+         }
+      }
+
+      // Batch insert new records
+      if (recordsToAdd.length > 0) {
+          await Storage.addRecordsBatch(recordsToAdd, user.id);
+      }
+      
       setEditingRecord(null); // Clear edit state
     } catch (e) {
+      console.error(e);
       alert("保存失败");
       // Rollback
       setRecords(originalRecords);
@@ -252,6 +281,18 @@ const App: React.FC = () => {
     }
   };
 
+  const handleClearData = async () => {
+    if (!user) return;
+    try {
+        await Storage.deleteAllRecords(user.id);
+        setRecords([]);
+        alert('已清空所有记录');
+    } catch (e) {
+        console.error(e);
+        alert('清空失败');
+    }
+  };
+
   // Render Logic
   const renderContent = () => {
     switch (view) {
@@ -302,9 +343,10 @@ const App: React.FC = () => {
             onNavigate={setView}
             user={user}
             onLogout={handleLogout}
+            onClearData={handleClearData}
           />
         );
-      case ViewState.DASHBOARD:
+      case ViewState.SETTINGS_CIRCLES:
       default:
         return (
           <Dashboard

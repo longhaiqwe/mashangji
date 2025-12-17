@@ -1,16 +1,17 @@
 
 import React from 'react';
 import { ViewState, User } from '../types';
-import { Users, Palette, ChevronRight, Info, LogOut, UserCircle } from 'lucide-react';
+import { Users, Palette, ChevronRight, Info, LogOut, UserCircle, Trash2 } from 'lucide-react';
 import { authService } from '../services/authService';
 
 interface SettingsProps {
   onNavigate: (view: ViewState) => void;
   user?: User | null;
   onLogout: () => void;
+  onClearData?: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout }) => {
+const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClearData }) => {
   const handleLogout = () => {
     // Simply clear storage and trigger UI update
     authService.logout();
@@ -33,6 +34,18 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout }) => {
       desc: '更换应用背景壁纸'
     }
   ];
+
+  const handleClearAllRecords = () => {
+    if (confirm('⚠️ 危险操作\n\n确定要清空该账号下的所有记账记录吗？\n此操作不可恢复！')) {
+        // We'll emit a custom event that App.tsx can listen to, or pass a prop.
+        // But since we don't have a direct prop for this, let's use a custom event for simplicity 
+        // or just expose the functionality via a new prop.
+        // Let's modify SettingsProps to include onClearData.
+        if (onClearData) {
+            onClearData();
+        }
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-white/50">
@@ -97,6 +110,20 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout }) => {
               Version 1.1.2
             </p>
           </div>
+        </div>
+
+        {/* Clear Data Button */}
+        <div className="pt-4 pb-8">
+            <button
+                onClick={handleClearAllRecords}
+                className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl border border-red-200 transition-colors flex items-center justify-center text-sm"
+            >
+                <Trash2 className="w-4 h-4 mr-2" />
+                清空所有记录
+            </button>
+            <p className="text-center text-xs text-gray-400 mt-2">
+                用于测试 AI 导入功能，请谨慎操作
+            </p>
         </div>
       </div>
     </div>

@@ -48,6 +48,27 @@ export const addRecord = async (record: Record, userId: string): Promise<Record 
   return record;
 };
 
+export const addRecordsBatch = async (records: Record[], userId: string): Promise<void> => {
+  if (records.length === 0) return;
+
+  const dbRecords = records.map(record => ({
+    id: record.id,
+    user_id: userId,
+    circle_id: record.circleId,
+    amount: record.amount,
+    date: record.date,
+    note: record.note,
+    timestamp: record.timestamp,
+  }));
+
+  const { error } = await supabase.from('records').insert(dbRecords);
+
+  if (error) {
+    console.error('Error adding batch records:', error);
+    throw error;
+  }
+};
+
 export const updateRecord = async (record: Record, userId: string): Promise<void> => {
   const dbRecord = {
     circle_id: record.circleId,
@@ -77,6 +98,18 @@ export const deleteRecord = async (recordId: string, userId: string): Promise<vo
 
   if (error) {
     console.error('Error deleting record:', error);
+    throw error;
+  }
+};
+
+export const deleteAllRecords = async (userId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('records')
+    .delete()
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error deleting all records:', error);
     throw error;
   }
 };
