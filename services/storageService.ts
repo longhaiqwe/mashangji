@@ -129,8 +129,13 @@ export const fetchCircles = async (userId: string): Promise<Circle[]> => {
 
   if (!data || data.length === 0) {
     // Initializing default circles for new user in DB
-    await syncCircles(DEFAULT_CIRCLES, userId);
-    return DEFAULT_CIRCLES;
+    // Assign unique IDs to prevent collision
+    const newDefaultCircles = DEFAULT_CIRCLES.map(c => ({
+      ...c,
+      id: generateId()
+    }));
+    await syncCircles(newDefaultCircles, userId);
+    return newDefaultCircles;
   }
 
   return data.map((item: any) => ({
