@@ -49,6 +49,15 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
     importTextRef.current = importText;
   }, [importText]);
 
+  // Sync prop to state to handle re-navigation/long-press when component is already mounted
+  useEffect(() => {
+    if (initialAutoStartVoice) {
+        setImportMode('voice');
+        setAutoStartVoice(true);
+        setShowImportModal(true);
+    }
+  }, [initialAutoStartVoice]);
+
   const silenceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -66,7 +75,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
                 if (isListening && (importTextRef.current || tempTranscript)) {
                     toggleListening();
                 }
-            }, 2500); // 2.5 seconds silence threshold
+            }, 2000); // 2 seconds silence threshold
         }
     }
 
@@ -171,7 +180,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
             return () => clearTimeout(timer);
         }
     }
-  }, [showImportModal]);
+  }, [showImportModal, autoStartVoice]);
 
   const handleUserCloseModal = () => {
       // If user manually closes the modal and it was auto-started (e.g. from home shortcut),
@@ -184,12 +193,17 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
 
   const handleCloseModal = () => {
     // Clean up voice recording if active
-    if (isListening) {
+    if (isListening || recognition) {
       if (Capacitor.isNativePlatform()) {
         SpeechRecognition.stop().catch(() => {});
       }
       if (recognition) {
-        recognition.stop();
+        try {
+            recognition.stop();
+            // Optional: abort to completely free resources? recognition.abort();
+        } catch (e) {
+            console.warn("Stop recognition error:", e);
+        }
       }
       setIsListening(false);
     }
@@ -271,6 +285,9 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
                  r.onerror = (event: any) => {
                      console.error('Speech recognition error', event.error);
                      setIsListening(false);
+                     if (event.error === 'not-allowed') {
+                         alert('请允许麦克风权限');
+                     }
                  };
                  r.onresult = (event: any) => {
                      let interim = '';
@@ -292,7 +309,11 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
                  };
                  setRecognition(r);
                  // Start immediately
-                 r.start();
+                 try {
+                    r.start();
+                 } catch (e) {
+                     console.error("Start error:", e);
+                 }
                  return;
             }
         }
@@ -309,7 +330,18 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
           }
       }, 500);
     } else {
-      recognition.start();
+      try {
+        recognition.start();
+      } catch (e) {
+          console.error("Restart error:", e);
+          // If start fails (e.g. already started), try to stop first then start
+          try {
+              recognition.stop();
+              setTimeout(() => recognition.start(), 100);
+          } catch (e2) {
+              console.error("Retry start error:", e2);
+          }
+      }
     }
   };
 
@@ -537,8 +569,10 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
                 type="button"
                 onClick={() => {
                     setImportMode('voice');
-                    setAutoStartVoice(true);
                     setShowImportModal(true);
+                    // Don't rely on autoStartVoice effect for local interaction to avoid User Gesture loss
+                    // Start listening immediately
+                    toggleListening();
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
                 title="语音记账"
@@ -766,7 +800,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
                     <div className="flex flex-col items-center">
                         <div className="flex items-center">
                             <Loader2 className="animate-spin mr-2 w-5 h-5"/>
-                            正在分析...
+                            AI 分析中...
                         </div>
                         {importMode === 'batch' && (
                             <span className="text-[10px] font-normal opacity-80 mt-1">
