@@ -7,6 +7,8 @@ import { analyzeText, ParsedRecord } from '../services/geminiService';
 import { Capacitor } from '@capacitor/core';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 
+type ImportMode = 'batch' | 'voice';
+
 interface AddRecordProps {
   circles: Circle[];
   onSave: (record: Record | Record[]) => void;
@@ -26,6 +28,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
 
   // AI Import State
   const [showImportModal, setShowImportModal] = useState(initialAutoStartVoice);
+  const [importMode, setImportMode] = useState<ImportMode>(initialAutoStartVoice ? 'voice' : 'batch');
   const [importText, setImportText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [parsedResults, setParsedResults] = useState<ParsedRecord[]>([]);
@@ -153,6 +156,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
         setFeedback(null);
         
         if (autoStartVoice) {
+            setImportMode('voice');
             // Force blur any active element to prevent keyboard from showing up
             // This is critical for iOS where keyboard might pop up on view change
             if (document.activeElement instanceof HTMLElement) {
@@ -488,8 +492,12 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
         <h2 className="flex-1 text-center font-bold text-lg text-gray-800">
             {initialRecord ? '编辑记录' : '记一笔'}
         </h2>
-        <button onClick={() => setShowImportModal(true)} className="p-2 -mr-2 text-indigo-600">
-           <Sparkles className="w-6 h-6" />
+        <button onClick={() => {
+            setImportMode('batch');
+            setShowImportModal(true);
+        }} className="p-2 -mr-2 text-indigo-600 flex items-center space-x-1">
+           <span className="text-sm font-bold">批量导入</span>
+           <Sparkles className="w-5 h-5" />
         </button>
       </div>
 
@@ -528,6 +536,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
             <button
                 type="button"
                 onClick={() => {
+                    setImportMode('voice');
                     setAutoStartVoice(true);
                     setShowImportModal(true);
                 }}
@@ -612,7 +621,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
             <div className="flex justify-between items-center">
               <h3 className="font-bold text-lg text-gray-800 flex items-center">
                 <Sparkles className="w-5 h-5 mr-2 text-indigo-500"/> 
-                AI 智能识别
+                {importMode === 'voice' ? '语音记账' : '批量导入'}
               </h3>
               <div className="flex items-center space-x-2">
                 <button
@@ -662,36 +671,62 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
             ) : (
                 <div className="space-y-2 flex-1 flex flex-col">
                     <label className="text-sm text-gray-500 block">
-                        语音输入或粘贴文本 
+                        {importMode === 'voice' ? '语音输入' : '粘贴文本'}
                         <span className="text-xs text-gray-400 ml-2">(支持时间、金额、输赢、圈子)</span>
                     </label>
                     <div className="relative flex-1">
-                        <textarea
-                            className="w-full h-full min-h-[120px] p-3 bg-gray-50 rounded-xl border border-gray-200 resize-none text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none pb-12"
-                            placeholder="点击右下角麦克风说话，例如：
+                        {importMode === 'batch' ? (
+                            <textarea
+                                className="w-full h-full min-h-[120px] p-3 bg-gray-50 rounded-xl border border-gray-200 resize-none text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                                placeholder="请粘贴多条记录，例如：
 '昨天在雀神会打麻将赢了200'
 '周五和朋友斗地主输了50'"
-                            value={importText + (isListening && tempTranscript ? (importText ? ' ' : '') + tempTranscript : '')}
-                            onChange={(e) => {
-                                setImportText(e.target.value);
-                                setFeedback(null); // Clear feedback on user input
-                            }}
-                            // Prevent keyboard from showing up when auto-starting voice
-                            readOnly={isListening || autoStartVoice} 
-                        />
-                        {/* Voice Input Button */}
-                        <button
-                            type="button"
-                            onClick={toggleListening}
-                            className={`absolute right-3 bottom-3 p-3 rounded-full shadow-lg transition-all ${
-                                isListening 
-                                ? 'bg-red-500 text-white animate-pulse scale-110' 
-                                : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105'
-                            }`}
-                            title={isListening ? "停止录音" : "开始语音输入"}
-                        >
-                            {isListening ? <MicOff size={20} /> : <Mic size={20} />}
-                        </button>
+                                value={importText}
+                                onChange={(e) => {
+                                    setImportText(e.target.value);
+                                    setFeedback(null); // Clear feedback on user input
+                                }}
+                            />
+                        ) : (
+                            <div className="w-full h-full min-h-[120px] bg-indigo-50/50 rounded-xl border border-indigo-100 flex flex-col items-center justify-center relative overflow-hidden">
+                                {tempTranscript || importText ? (
+                                    <div className="w-full h-full p-4 overflow-y-auto text-center text-lg font-medium text-gray-700 flex items-center justify-center">
+                                        "{tempTranscript || importText}"
+                                    </div>
+                                ) : (
+                                    <div className="text-center space-y-2">
+                                        <p className="text-indigo-600 font-medium">
+                                            {isListening ? '正在聆听...' : '点击下方按钮开始说话'}
+                                        </p>
+                                    </div>
+                                )}
+                                
+                                {/* Voice Wave Animation when listening */}
+                                {isListening && (
+                                    <div className="absolute inset-0 pointer-events-none opacity-10">
+                                        <div className="absolute inset-0 flex items-center justify-center space-x-1">
+                                            {[...Array(5)].map((_, i) => (
+                                                <div key={i} className="w-2 bg-indigo-600 rounded-full animate-bounce" style={{ height: '40%', animationDelay: `${i * 0.1}s` }}></div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Voice Input Button Centered */}
+                                <button
+                                    type="button"
+                                    onClick={toggleListening}
+                                    className={`mt-4 p-4 rounded-full shadow-xl transition-all ${
+                                        isListening 
+                                        ? 'bg-red-500 text-white animate-pulse scale-110 shadow-red-500/30' 
+                                        : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 shadow-indigo-500/30'
+                                    }`}
+                                    title={isListening ? "停止录音" : "开始语音输入"}
+                                >
+                                    {isListening ? <MicOff size={32} /> : <Mic size={32} />}
+                                </button>
+                            </div>
+                        )}
                     </div>
                     
                     {/* Feedback Message */}
@@ -723,15 +758,22 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
                 )}
                 
                 <button
-                onClick={parsedResults.length > 0 ? handleBatchImport : handleAnalyze}
+                onClick={parsedResults.length > 0 ? handleBatchImport : () => handleAnalyze()}
                 disabled={isAnalyzing}
                 className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/30"
                 >
                 {isAnalyzing ? (
-                    <>
-                    <Loader2 className="animate-spin mr-2 w-5 h-5"/>
-                    正在分析...
-                    </>
+                    <div className="flex flex-col items-center">
+                        <div className="flex items-center">
+                            <Loader2 className="animate-spin mr-2 w-5 h-5"/>
+                            正在分析...
+                        </div>
+                        {importMode === 'batch' && (
+                            <span className="text-[10px] font-normal opacity-80 mt-1">
+                                批量分析可能需要 1～2 分钟左右，请耐心等待...
+                            </span>
+                        )}
+                    </div>
                 ) : parsedResults.length > 0 ? (
                     <>
                     <Check className="mr-2 w-5 h-5"/>

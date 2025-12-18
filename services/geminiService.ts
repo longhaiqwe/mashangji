@@ -21,57 +21,70 @@ export const analyzeText = async (text: string, availableCircles: string[] = [],
   const currentYear = today.getFullYear();
 
   const prompt = `
-    You are an expert data extraction assistant.
-    Your task is to extract financial records (specifically Mahjong or game results) from the provided text.
-    The text may contain multiple records spanning different dates and years.
+    你是一个专业的账单数据提取助手。
+    你的任务是从提供的文本中提取财务记录（特别是麻将或游戏结果）。
+    文本可能包含跨越不同日期和年份的多条记录。
     
-    Current Date Reference: ${todayStr} (Year: ${currentYear})
-    Available Circles: ${availableCircles.length > 0 ? availableCircles.join(', ') : 'None'}
+    当前参考日期: ${todayStr} (年份: ${currentYear})
+    可用圈子: ${availableCircles.length > 0 ? availableCircles.join(', ') : '无'}
     
-    Extraction Rules:
-    1. **Date**: 
-       - Extract date in YYYY-MM-DD format.
-       - Handle relative dates (e.g., "yesterday", "last Friday") based on the Current Date Reference.
-       - If a year is not specified, assume the current year (${currentYear}) UNLESS the month/day is in the future relative to today, in which case assume the previous year.
-       - If the text explicitly mentions a year (e.g., "21年", "2022"), use that year.
-       - If no date is found for a specific entry, use ${todayStr}.
-       - Context carries over: if a line says "May 1st" and subsequent lines don't mention a date, assume they are also for May 1st unless indicated otherwise.
+    提取规则:
+    1. **日期 (Date)**: 
+       - 提取 YYYY-MM-DD 格式的日期。
+       - 处理相对日期（如“昨天”、“上周五”）。
+       - **特别注意简写格式**: 如 "2.6" 代表 2月6日, "2.14" 代表 2月14日。
+       - 如果未指定年份，默认为当前年份 (${currentYear})；如果该月/日相对于今天是在未来，则推断为去年。
+       - 如果文本明确提到了年份（如 "21年"），请使用该年份。
+       - 如果某条记录没有日期，使用 ${todayStr}。
+       - 上下文继承：如果第一行是 "5月1日"，后续行没有日期，则默认也是 5月1日。
     
-    2. **Amount**: 
-       - Extract the numeric value.
-       - Ignore currency symbols.
+    2. **金额 (Amount)**: 
+       - 提取数值。
+       - 忽略货币符号。
+       - 处理简写格式: 如 "2.6+800" 中，2.6是日期，+800是金额。
     
-    3. **isWin**: 
-       - true if the user WON money (keywords: 赢, +, 收, 入, win).
-       - false if the user LOST money (keywords: 输, -, 出, loss, 给).
+    3. **输赢 (isWin)**: 
+       - true: 赢钱 (关键词: 赢, +, 收, 入, win, 正数)。
+       - false: 输钱 (关键词: 输, -, 出, loss, 给, 负数)。
+    
+    4. **圈子名称 (Circle Name)**:
+       - 尝试匹配 "可用圈子" 中的名称。
+       - 允许模糊匹配（如 "同事" 匹配 "同事圈"）。
+       - 如果找到匹配项，返回 "可用圈子" 中的确切名称。
+       - 如果未找到，保持 undefined 或 null。
+    
+    5. **备注 (Note)**: 
+       - 提取具体的描述（如 "和老王", "在棋牌室"）。
+       - **重要**: 不要包含已提取的日期、金额或圈子名称。
+       - 如果没有剩余描述，返回空字符串 ("")。
+    
+    6. **排除汇总数据**:
+       - **忽略仅包含“月”或“年”而没有具体“日”的行**。例如: "1月-7640", "2024年总计+500", "2月+4810"。
+       - 忽略包含 "汇总", "合计", "总计", "小计", "结余", "账目" 等关键词的行。
+       - 你的目标是提取**单次**的记录，而不是汇总。
+    
+    7. **无效输入**:
+       - 如果文本不包含任何财务上下文，返回空数组。
+       - 除非明确说明 "平局" 或 "0"，否则不要返回金额为 0 的记录。
 
-    4. **Circle Name** (circleName):
-       - Try to match the input text with one of the "Available Circles".
-       - Fuzzy match is allowed (e.g. "同事" matches "同事圈").
-       - If a match is found, return the EXACT name from "Available Circles".
-       - If no match is found, leave it undefined or null.
-    
-    5. **Note**: 
-       - Extract specific descriptions if present (e.g., "with John", "at Club").
-       - **IMPORTANT**: Do NOT include information that has already been extracted as Date, Amount, or Circle Name.
-       - If the text says "和同事打牌" and "同事圈" is identified as the circle, the note should NOT contain "同事".
-       - If NO specific description remains, return an EMPTY STRING ("").
-       - DO NOT invent notes like "Game result", "Mahjong", "Win", "Loss", "Record".
-    
-    6. **Invalid Input**:
-       - If the text does NOT contain any financial context (no amount, no win/loss keywords), or is just casual conversation (e.g., "hello", "test", "whatever", "随便说点什么"), return an **EMPTY ARRAY []**.
-       - Do NOT return a record with amount 0 unless the text explicitly says "won 0" or "lost 0" (e.g. "平局", "没输没赢").
-       - If the input is empty or meaningless, return [].
-
-    Input Text:
+    输入文本:
     "${text}"
     
-    Output Format:
-    Return a VALID JSON ARRAY of objects. Each object must have keys: "date", "amount", "isWin", "note", "circleName".
-    Example: [{"date": "2023-05-20", "amount": 200, "isWin": true, "note": "开心", "circleName": "同事圈"}]
-    Example for invalid input: []
+    输出格式:
+    返回一个标准的 JSON 对象，该对象必须包含一个名为 "records" 的键，其值为对象数组。
+    不要包含 markdown 代码块（如 \`\`\`json）。只返回纯 JSON 字符串。
     
-    Do not include markdown code blocks (like \`\`\`json). Just the raw JSON string.
+    示例输入: 
+    "2.6 +800
+    2.14 -190 雀神会"
+    
+    示例输出:
+    {
+      "records": [
+        {"date": "${currentYear}-02-06", "amount": 800, "isWin": true, "note": "", "circleName": null},
+        {"date": "${currentYear}-02-14", "amount": 190, "isWin": false, "note": "", "circleName": "雀神会"}
+      ]
+    }
   `;
 
   try {
@@ -82,7 +95,7 @@ export const analyzeText = async (text: string, availableCircles: string[] = [],
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "deepseek-ai/DeepSeek-V3.2", // Using DeepSeek-V3.2 model
+        model: "deepseek-ai/DeepSeek-V3",
         messages: [
           {
             role: "user",
@@ -91,7 +104,7 @@ export const analyzeText = async (text: string, availableCircles: string[] = [],
         ],
         stream: false,
         max_tokens: 2048,
-        temperature: 0.1, // Low temperature for consistent JSON output
+        temperature: 0.1,
         response_format: {
           type: "json_object"
         }
@@ -110,49 +123,51 @@ export const analyzeText = async (text: string, availableCircles: string[] = [],
     // Clean up potential markdown formatting
     let jsonString = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
     
-    // Find the first '[' and last ']' to extract JSON array if there's extra text
-    const firstBracket = jsonString.indexOf('[');
-    const lastBracket = jsonString.lastIndexOf(']');
+    // Find the first '{' and last '}' to extract JSON object
+    const firstCurly = jsonString.indexOf('{');
+    const lastCurly = jsonString.lastIndexOf('}');
     
-    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
-        jsonString = jsonString.substring(firstBracket, lastBracket + 1);
-    } else {
-        // Fallback: check for single object { ... }
-        const firstCurly = jsonString.indexOf('{');
-        const lastCurly = jsonString.lastIndexOf('}');
-        if (firstCurly !== -1 && lastCurly !== -1 && lastCurly > firstCurly) {
-             jsonString = jsonString.substring(firstCurly, lastCurly + 1);
-        }
+    if (firstCurly !== -1 && lastCurly !== -1 && lastCurly > firstCurly) {
+        jsonString = jsonString.substring(firstCurly, lastCurly + 1);
     }
 
-    let data: any;
+    let data: any[] = [];
     try {
-      data = JSON.parse(jsonString);
-    } catch (e) {
-      // Sometimes AI returns a single object inside a key or just a single object
-      console.warn('Failed to parse as JSON array, trying to fix structure', e);
-      // Heuristic: if it starts with { and ends with }, wrap in []
-      if (jsonString.startsWith('{') && jsonString.endsWith('}')) {
-        try {
-             const parsed = JSON.parse(jsonString);
-             // Check if it's wrapped in a key like "records": [...]
-             const keys = Object.keys(parsed);
-             if (keys.length === 1 && Array.isArray(parsed[keys[0]])) {
-                 data = parsed[keys[0]];
-             } else {
-                 data = [parsed];
-             }
-        } catch(e2) {
-             throw e;
-        }
-      } else {
-        throw e;
+      const parsed = JSON.parse(jsonString);
+      
+      // Handle { "records": [...] } format (preferred)
+      if (parsed.records && Array.isArray(parsed.records)) {
+          data = parsed.records;
+      } 
+      // Handle direct array format (legacy fallback)
+      else if (Array.isArray(parsed)) {
+          data = parsed;
       }
-    }
-
-    if (!Array.isArray(data)) {
-      // Fallback if it's a single object
-      data = [data];
+      // Handle single object format (legacy fallback)
+      else if (typeof parsed === 'object' && parsed !== null) {
+          // If it looks like a record, wrap it
+          if (parsed.amount !== undefined || parsed.isWin !== undefined) {
+              data = [parsed];
+          } else {
+              // Maybe wrapped in another key?
+              const keys = Object.keys(parsed);
+              if (keys.length === 1 && Array.isArray(parsed[keys[0]])) {
+                  data = parsed[keys[0]];
+              }
+          }
+      }
+    } catch (e) {
+      console.warn('Failed to parse JSON:', e);
+      // Try array fallback for some edge cases
+      if (jsonString.startsWith('[') && jsonString.endsWith(']')) {
+          try {
+              data = JSON.parse(jsonString);
+          } catch (e2) {
+              throw e;
+          }
+      } else {
+          throw e;
+      }
     }
     
     return data.map((item: any) => ({
