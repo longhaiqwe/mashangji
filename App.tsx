@@ -113,32 +113,32 @@ const App: React.FC = () => {
   // Handle Late User Loading removed - logic is now in initAuth
 
 
-  // Load Data from Supabase when User Changes
+  // Load Data from Supabase
+  const refreshData = async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      const [loadedRecords, loadedCircles, loadedPrefs] = await Promise.all([
+        Storage.fetchRecords(user.id),
+        Storage.fetchCircles(user.id),
+        Storage.fetchPreferences(user.id)
+      ]);
+
+      setRecords(loadedRecords);
+      // Ensure circles is never empty to prevent UI issues
+      setCircles(loadedCircles.length > 0 ? loadedCircles : DEFAULT_CIRCLES);
+      setPreferences(loadedPrefs);
+    } catch (error) {
+      console.error("Failed to sync data", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadData = async () => {
-      if (!user) return;
-
-      setIsLoading(true);
-      try {
-        const [loadedRecords, loadedCircles, loadedPrefs] = await Promise.all([
-          Storage.fetchRecords(user.id),
-          Storage.fetchCircles(user.id),
-          Storage.fetchPreferences(user.id)
-        ]);
-
-        setRecords(loadedRecords);
-        // Ensure circles is never empty to prevent UI issues
-        setCircles(loadedCircles.length > 0 ? loadedCircles : DEFAULT_CIRCLES);
-        setPreferences(loadedPrefs);
-      } catch (error) {
-        console.error("Failed to sync data", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     if (user) {
-      loadData();
+      refreshData();
     }
   }, [user?.id]); // Only reload if user ID changes
 
@@ -347,6 +347,7 @@ const App: React.FC = () => {
             user={user}
             onLogout={handleLogout}
             onClearData={handleClearData}
+            onDataRefresh={refreshData}
           />
         );
       case ViewState.SETTINGS_CIRCLES:
