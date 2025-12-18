@@ -11,6 +11,7 @@ import CircleManager from './components/CircleManager';
 import Statistics from './components/Statistics';
 import Settings from './components/Settings';
 import ThemeSettings from './components/ThemeSettings';
+import Feedback from './components/Feedback';
 import Login from './components/Login';
 import LoadingScreen from './components/LoadingScreen';
 import { supabase } from './services/supabase';
@@ -330,6 +331,13 @@ const App: React.FC = () => {
             preferences={preferences}
             onUpdatePreferences={handleUpdatePreferences}
             onNavigate={setView}
+          />
+        );
+      case ViewState.SETTINGS_FEEDBACK:
+        return (
+          <Feedback
+            onNavigate={setView}
+            userId={user?.id}
           />
         );
       case ViewState.STATS:

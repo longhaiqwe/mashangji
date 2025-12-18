@@ -28,6 +28,7 @@ export enum ViewState {
   SETTINGS = 'SETTINGS',          // Main Settings Menu
   SETTINGS_CIRCLES = 'SETTINGS_CIRCLES', // Sub-page
   SETTINGS_THEME = 'SETTINGS_THEME',     // Sub-page
+  SETTINGS_FEEDBACK = 'SETTINGS_FEEDBACK', // Sub-page
 }
 
 export interface SummaryStats {

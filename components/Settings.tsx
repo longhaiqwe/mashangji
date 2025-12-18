@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { ViewState, User, Record, Circle } from '../types';
-import { Users, Palette, ChevronRight, Info, LogOut, UserCircle, Trash2, FileDown, FileUp } from 'lucide-react';
+import { Users, Palette, ChevronRight, Info, LogOut, UserCircle, Trash2, FileDown, FileUp, MessageSquare } from 'lucide-react';
 import { authService } from '../services/authService';
 import { fetchRecords, fetchCircles, addRecordsBatch, syncCircles, generateId } from '../services/storageService';
 import { Capacitor } from '@capacitor/core';
@@ -261,6 +261,13 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
       icon: Palette,
       onClick: () => onNavigate(ViewState.SETTINGS_THEME),
       desc: '更换应用背景壁纸'
+    },
+    {
+      id: 'feedback',
+      label: '意见反馈',
+      icon: MessageSquare,
+      onClick: () => onNavigate(ViewState.SETTINGS_FEEDBACK),
+      desc: '提交建议或遇到的问题'
     }
   ];
 
