@@ -95,7 +95,7 @@ export const analyzeText = async (text: string, availableCircles: string[] = [],
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "deepseek-ai/DeepSeek-V3",
+        model: "Pro/deepseek-ai/DeepSeek-V3.2",
         messages: [
           {
             role: "user",

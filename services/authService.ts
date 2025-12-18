@@ -113,7 +113,7 @@ export const authService = {
       const { data: { session }, error } = await Promise.race([
         supabase.auth.getSession(),
         new Promise<{ data: { session: any }, error: any }>((_, reject) =>
-          setTimeout(() => reject(new Error('Session check timeout')), 5000)
+          setTimeout(() => reject(new Error('Session check timeout')), 20000)
         )
       ]);
 
