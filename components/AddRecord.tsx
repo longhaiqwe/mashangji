@@ -804,7 +804,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
                         </div>
                         {importMode === 'batch' && (
                             <span className="text-[10px] font-normal opacity-80 mt-1">
-                                批量分析可能需要 1～2 分钟左右，请耐心等待...
+                                批量分析可能需要 1 分钟左右，请耐心等待...
                             </span>
                         )}
                     </div>
