@@ -26,6 +26,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true); // New: Block UI until auth check is done
   const [editingRecord, setEditingRecord] = useState<Record | null>(null);
+  const [autoStartVoice, setAutoStartVoice] = useState(false);
 
   // Check Auth on Mount & Listen for Changes
   useEffect(() => {
@@ -306,9 +307,11 @@ const App: React.FC = () => {
             onCancel={() => {
               setView(ViewState.DASHBOARD);
               setEditingRecord(null);
+              setAutoStartVoice(false);
             }}
             initialCircleId={circles[0]?.id}
             initialRecord={editingRecord}
+            initialAutoStartVoice={autoStartVoice}
           />
         );
       case ViewState.SETTINGS_CIRCLES:
@@ -382,8 +385,14 @@ const App: React.FC = () => {
             // If manually switching to Add Record (bottom nav), treat as new record
             if (v === ViewState.ADD_RECORD) {
               setEditingRecord(null);
+              setAutoStartVoice(false);
             }
             setView(v);
+          }}
+          onVoiceEntry={() => {
+              setEditingRecord(null);
+              setAutoStartVoice(true);
+              setView(ViewState.ADD_RECORD);
           }}
         />
       )}

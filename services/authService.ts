@@ -46,7 +46,13 @@ export const authService = {
       ]);
 
       if (error) {
-        console.error('[AuthService] Login error:', error);
+        console.error('[AuthService] Login error:', JSON.stringify(error, null, 2));
+        
+        // Handle "AuthRetryableFetchError" specifically (often network/CORS related in hybrid apps)
+        if (error.name === 'AuthRetryableFetchError' || (error as any).isRetryable) {
+             throw new Error("网络连接失败，请检查您的网络设置（AuthRetryableFetchError）");
+        }
+
         throw new Error(mapSupabaseError(error.message));
       }
 

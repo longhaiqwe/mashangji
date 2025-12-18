@@ -1,9 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { Circle, Record } from '../types';
-import { ChevronLeft, Calendar, FileText, Check, Users, Sparkles, X, Loader2, Trash2, RefreshCw } from 'lucide-react';
+import { ChevronLeft, Calendar, FileText, Check, Users, Sparkles, X, Loader2, Trash2, RefreshCw, Mic, MicOff } from 'lucide-react';
 import { generateId } from '../services/storageService';
 import { analyzeText, ParsedRecord } from '../services/geminiService';
+import { Capacitor } from '@capacitor/core';
+import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 
 interface AddRecordProps {
   circles: Circle[];
@@ -11,9 +13,10 @@ interface AddRecordProps {
   onCancel: () => void;
   initialCircleId?: string;
   initialRecord?: Record | null; // For editing
+  initialAutoStartVoice?: boolean;
 }
 
-const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initialCircleId, initialRecord }) => {
+const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initialCircleId, initialRecord, initialAutoStartVoice = false }) => {
   const [amount, setAmount] = useState<string>('');
   const [isWin, setIsWin] = useState<boolean>(true);
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -22,13 +25,289 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
   const [error, setError] = useState<string>('');
 
   // AI Import State
-  const [showImportModal, setShowImportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(initialAutoStartVoice);
   const [importText, setImportText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [parsedResults, setParsedResults] = useState<ParsedRecord[]>([]);
+  const [feedback, setFeedback] = useState<{type: 'error' | 'info', message: string} | null>(null);
 
   // Keep track of the original text for re-analysis
   const [lastImportText, setLastImportText] = useState('');
+
+  // Voice Input State
+  const [isListening, setIsListening] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
+  const [tempTranscript, setTempTranscript] = useState('');
+  const [autoStartVoice, setAutoStartVoice] = useState(initialAutoStartVoice);
+  
+  // Ref to keep track of latest importText for async operations
+  const importTextRef = React.useRef(importText);
+  useEffect(() => {
+    importTextRef.current = importText;
+  }, [importText]);
+
+  const silenceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Silence Detection: Auto-stop recording if no speech for 2.5 seconds
+    if (isListening) {
+        // Clear existing timer on any update (speech detected)
+        if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+        }
+
+        // Only start timer if we have some content (to avoid stopping before user starts speaking)
+        if (importText || tempTranscript) {
+            silenceTimerRef.current = setTimeout(() => {
+                // Double check we are still listening and have content
+                if (isListening && (importTextRef.current || tempTranscript)) {
+                    toggleListening();
+                }
+            }, 2500); // 2.5 seconds silence threshold
+        }
+    }
+
+    return () => {
+        if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+        }
+    };
+  }, [isListening, importText, tempTranscript]); // Re-run on transcript update
+
+  // Initialize Web Speech API or Native Listeners
+  useEffect(() => {
+    // Web Speech API Setup
+    if (!Capacitor.isNativePlatform() && typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      
+      if (SpeechRecognition) {
+        const r = new SpeechRecognition();
+        r.continuous = true; // Use continuous for better flow, handle stop manually
+        r.interimResults = true;
+        r.lang = 'zh-CN';
+
+        r.onstart = () => setIsListening(true);
+        r.onend = () => setIsListening(false);
+        r.onerror = (event: any) => {
+            console.error('Speech recognition error', event.error);
+            setIsListening(false);
+        };
+        
+        r.onresult = (event: any) => {
+            let interim = '';
+            let final = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                final += event.results[i][0].transcript;
+            } else {
+                interim += event.results[i][0].transcript;
+            }
+            }
+            
+            if (final) {
+                setImportText(prev => prev + (prev ? ' ' : '') + final);
+                setTempTranscript('');
+            }
+            if (interim) {
+                setTempTranscript(interim);
+            }
+        };
+        setRecognition(r);
+      }
+    }
+
+    // Native Listeners Setup
+    if (Capacitor.isNativePlatform()) {
+        SpeechRecognition.removeAllListeners();
+        SpeechRecognition.addListener('partialResults', (data: any) => {
+            if (data.matches && data.matches.length > 0) {
+                // Native usually returns the full accumulated string for the current session
+                setTempTranscript(data.matches[0]);
+            }
+        });
+    }
+  }, []);
+
+  // Cleanup listeners on unmount
+  useEffect(() => {
+    return () => {
+      if (Capacitor.isNativePlatform()) {
+        SpeechRecognition.removeAllListeners();
+        // Force stop if still listening
+        SpeechRecognition.stop().catch(() => {});
+      }
+      if (recognition) {
+        recognition.stop();
+      }
+    };
+  }, [recognition]);
+
+  // Auto-start voice if requested
+  useEffect(() => {
+    if (showImportModal) {
+        // Always reset state when modal opens to prevent stale data
+        setImportText('');
+        setTempTranscript('');
+        setParsedResults([]);
+        setLastImportText('');
+        setFeedback(null);
+        
+        if (autoStartVoice) {
+            // Force blur any active element to prevent keyboard from showing up
+            // This is critical for iOS where keyboard might pop up on view change
+            if (document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+            }
+
+            // Small delay to ensure modal is ready and UI is stable
+            const timer = setTimeout(() => {
+                toggleListening();
+                setAutoStartVoice(false);
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }
+  }, [showImportModal]);
+
+  const handleUserCloseModal = () => {
+      // If user manually closes the modal and it was auto-started (e.g. from home shortcut),
+      // we should probably exit the whole AddRecord screen
+      if (initialAutoStartVoice) {
+          onCancel();
+      }
+      handleCloseModal();
+  };
+
+  const handleCloseModal = () => {
+    // Clean up voice recording if active
+    if (isListening) {
+      if (Capacitor.isNativePlatform()) {
+        SpeechRecognition.stop().catch(() => {});
+      }
+      if (recognition) {
+        recognition.stop();
+      }
+      setIsListening(false);
+    }
+    setShowImportModal(false);
+  };
+
+  const toggleListening = async () => {
+    // Clear previous feedback when starting new recording
+    if (!isListening) {
+        setFeedback(null);
+        // Clear previous input text when starting new recording manually
+        // Only if we are not in the middle of editing (heuristic: if there is text but no analysis results)
+        // But user request is "click voice input button, delete existing content"
+        // So we clear it.
+        setImportText('');
+        setTempTranscript('');
+    }
+
+    // Native Logic
+    if (Capacitor.isNativePlatform()) {
+        if (isListening) {
+            await SpeechRecognition.stop();
+            // Commit temp transcript
+            // Use importTextRef to get current text, avoiding stale closure
+            const currentImportText = importTextRef.current;
+            let finalText = currentImportText;
+            if (tempTranscript) {
+                finalText = currentImportText + (currentImportText ? ' ' : '') + tempTranscript;
+                setImportText(finalText);
+                setTempTranscript('');
+            }
+            setIsListening(false);
+            
+            // Auto Analyze after stopping
+            setTimeout(() => {
+                if (finalText && finalText.trim()) {
+                    handleAnalyze(finalText);
+                }
+            }, 500);
+        } else {
+            try {
+                // Check permissions
+                const status = await SpeechRecognition.checkPermissions();
+                if (status.speechRecognition !== 'granted') {
+                    const reqStatus = await SpeechRecognition.requestPermissions();
+                    if (reqStatus.speechRecognition !== 'granted') {
+                        alert('请授予麦克风权限以使用语音输入');
+                        return;
+                    }
+                }
+                
+                await SpeechRecognition.start({
+                    language: 'zh-CN',
+                    partialResults: true,
+                    popup: false,
+                });
+                setIsListening(true);
+            } catch (e) {
+                console.error('Native speech error:', e);
+                setIsListening(false);
+                alert('语音识别启动失败');
+            }
+        }
+        return;
+    }
+
+    // Web Logic
+    if (!recognition) {
+        // Try to initialize one last time if possible
+        if (!Capacitor.isNativePlatform() && typeof window !== 'undefined') {
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                 const r = new SpeechRecognition();
+                 r.continuous = true;
+                 r.interimResults = true;
+                 r.lang = 'zh-CN';
+                 r.onstart = () => setIsListening(true);
+                 r.onend = () => setIsListening(false);
+                 r.onerror = (event: any) => {
+                     console.error('Speech recognition error', event.error);
+                     setIsListening(false);
+                 };
+                 r.onresult = (event: any) => {
+                     let interim = '';
+                     let final = '';
+                     for (let i = event.resultIndex; i < event.results.length; ++i) {
+                         if (event.results[i].isFinal) {
+                             final += event.results[i][0].transcript;
+                         } else {
+                             interim += event.results[i][0].transcript;
+                         }
+                     }
+                     if (final) {
+                         setImportText(prev => prev + (prev ? ' ' : '') + final);
+                         setTempTranscript('');
+                     }
+                     if (interim) {
+                         setTempTranscript(interim);
+                     }
+                 };
+                 setRecognition(r);
+                 // Start immediately
+                 r.start();
+                 return;
+            }
+        }
+      alert('您的浏览器不支持语音输入，请尝试使用 Chrome 或 Safari');
+      return;
+    }
+    if (isListening) {
+      recognition.stop();
+      // Auto Analyze after stopping (Web Speech updates final result in onend/onresult)
+      // We rely on the fact that by the time we call analyze, the state might be updated or we need to wait
+      setTimeout(() => {
+          if (importTextRef.current && importTextRef.current.trim()) {
+            handleAnalyze();
+          }
+      }, 500);
+    } else {
+      recognition.start();
+    }
+  };
 
   // Auto-select circle if none selected and circles exist
   useEffect(() => {
@@ -48,27 +327,52 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
     }
   }, [initialRecord]);
 
-  const handleAnalyze = async () => {
-    if (!importText.trim()) {
+  const handleAnalyze = async (textOverride?: string) => {
+    const textToAnalyze = textOverride !== undefined ? textOverride : importTextRef.current;
+    
+    if (!textToAnalyze.trim()) {
       alert('请输入要识别的文本');
       return;
     }
 
     setIsAnalyzing(true);
     setParsedResults([]);
-    setLastImportText(importText);
+    setLastImportText(textToAnalyze);
+    setFeedback(null);
     try {
-      const results = await analyzeText(importText);
+      const circleNames = circles.map(c => c.name);
+      const results = await analyzeText(textToAnalyze, circleNames);
       if (results.length === 0) {
-        alert('未能识别到有效记录，请检查文本格式');
+        setFeedback({
+            type: 'error',
+            message: '未能识别到有效记录，请重新录入'
+        });
         // Do NOT clear importText so user can edit it
+      } else if (results.length === 1) {
+        // Auto-fill for single result
+        const res = results[0];
+        setAmount(Math.abs(res.amount).toString());
+        setIsWin(res.isWin);
+        setDate(res.date);
+        setNote(res.note);
+        if (res.circleName) {
+            const matched = circles.find(c => c.name === res.circleName);
+            if (matched) setCircleId(matched.id);
+        }
+        
+        setImportText('');
+        setParsedResults([]);
+        setShowImportModal(false);
       } else {
         setParsedResults(results);
         setImportText('');
       }
     } catch (err: any) {
-      alert(err.message || '识别失败，请检查网络或稍后重试');
-      console.error(err);
+      console.error("Analysis Error:", err);
+      setFeedback({
+          type: 'error',
+          message: err.message || '识别失败，请检查网络或稍后重试'
+      });
     } finally {
       setIsAnalyzing(false);
     }
@@ -79,15 +383,25 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
 
     setIsAnalyzing(true);
     try {
-      const results = await analyzeText(lastImportText);
+      const circleNames = circles.map(c => c.name);
+      const results = await analyzeText(lastImportText, circleNames);
       if (results.length === 0) {
-        alert('未能识别到有效记录');
+        setFeedback({
+            type: 'error',
+            message: '未能识别到有效记录，请重新录入'
+        });
       } else {
         setParsedResults(results);
-        alert('已重新识别');
+        setFeedback({
+            type: 'info',
+            message: '已重新识别'
+        });
       }
     } catch (err: any) {
-      alert(err.message || '识别失败，请检查网络或稍后重试');
+      setFeedback({
+          type: 'error',
+          message: err.message || '识别失败，请检查网络或稍后重试'
+      });
     } finally {
       setIsAnalyzing(false);
     }
@@ -98,14 +412,25 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
 
     // Use current circleId for all records
     // Or we could try to detect circle from text too, but for now stick to current selected circle
-    const recordsToSave: Record[] = parsedResults.map(res => ({
-        id: generateId(),
-        circleId: circleId,
-        amount: res.isWin ? Math.abs(res.amount) : -Math.abs(res.amount),
-        date: res.date,
-        note: res.note,
-        timestamp: new Date(res.date).getTime()
-    }));
+    const recordsToSave: Record[] = parsedResults.map(res => {
+        let targetCircleId = circleId;
+        // Try to match circle name
+        if (res.circleName) {
+            const matched = circles.find(c => c.name === res.circleName);
+            if (matched) {
+                targetCircleId = matched.id;
+            }
+        }
+
+        return {
+            id: generateId(),
+            circleId: targetCircleId,
+            amount: res.isWin ? Math.abs(res.amount) : -Math.abs(res.amount),
+            date: res.date,
+            note: res.note,
+            timestamp: new Date(res.date).getTime()
+        };
+    });
 
     onSave(recordsToSave);
     setShowImportModal(false);
@@ -197,9 +522,20 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
               placeholder="0.00"
               value={amount}
               onChange={handleAmountChange}
-              className={`w-full text-right pr-4 py-4 bg-gray-50 rounded-2xl text-4xl font-bold outline-none border-2 transition-colors ${error ? 'border-red-300' : 'border-transparent focus:border-mahjong-500'} ${isWin ? 'text-win' : 'text-loss'}`}
+              className={`w-full text-right pr-14 py-4 bg-gray-50 rounded-2xl text-4xl font-bold outline-none border-2 transition-colors ${error ? 'border-red-300' : 'border-transparent focus:border-mahjong-500'} ${isWin ? 'text-win' : 'text-loss'}`}
               autoFocus={!initialRecord} // Don't auto-focus on edit to avoid jarring jump on mobile
             />
+            <button
+                type="button"
+                onClick={() => {
+                    setAutoStartVoice(true);
+                    setShowImportModal(true);
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                title="语音记账"
+            >
+                <Mic size={24} />
+            </button>
           </div>
           {error && <p className="text-red-500 text-xs">{error}</p>}
         </div>
@@ -287,7 +623,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
                 >
                   <RefreshCw size={20} />
                 </button>
-                <button onClick={() => setShowImportModal(false)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={handleUserCloseModal} className="text-gray-400 hover:text-gray-600">
                   <X size={24} />
                 </button>
               </div>
@@ -305,6 +641,11 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
                                         {res.isWin ? '+' : '-'}{res.amount}
                                     </span>
                                     <span className="text-xs text-gray-400">{res.date}</span>
+                                    {res.circleName && (
+                                        <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100">
+                                            {res.circleName}
+                                        </span>
+                                    )}
                                 </div>
                                 <p className="text-xs text-gray-500 mt-1">{res.note || '无备注'}</p>
                             </div>
@@ -319,17 +660,52 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
                  ))}
               </div>
             ) : (
-                <div className="space-y-2">
-                <label className="text-sm text-gray-500 block">粘贴便签内容</label>
-                <textarea
-                    className="w-full h-32 p-3 bg-gray-50 rounded-xl border border-gray-200 resize-none text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                    placeholder="支持多条记录，例如：
-'2023年5月1日 赢了200
-5月3日 输了100
-昨天打麻将赢了50'"
-                    value={importText}
-                    onChange={(e) => setImportText(e.target.value)}
-                />
+                <div className="space-y-2 flex-1 flex flex-col">
+                    <label className="text-sm text-gray-500 block">
+                        语音输入或粘贴文本 
+                        <span className="text-xs text-gray-400 ml-2">(支持时间、金额、输赢、圈子)</span>
+                    </label>
+                    <div className="relative flex-1">
+                        <textarea
+                            className="w-full h-full min-h-[120px] p-3 bg-gray-50 rounded-xl border border-gray-200 resize-none text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none pb-12"
+                            placeholder="点击右下角麦克风说话，例如：
+'昨天在雀神会打麻将赢了200'
+'周五和朋友斗地主输了50'"
+                            value={importText + (isListening && tempTranscript ? (importText ? ' ' : '') + tempTranscript : '')}
+                            onChange={(e) => {
+                                setImportText(e.target.value);
+                                setFeedback(null); // Clear feedback on user input
+                            }}
+                            // Prevent keyboard from showing up when auto-starting voice
+                            readOnly={isListening || autoStartVoice} 
+                        />
+                        {/* Voice Input Button */}
+                        <button
+                            type="button"
+                            onClick={toggleListening}
+                            className={`absolute right-3 bottom-3 p-3 rounded-full shadow-lg transition-all ${
+                                isListening 
+                                ? 'bg-red-500 text-white animate-pulse scale-110' 
+                                : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105'
+                            }`}
+                            title={isListening ? "停止录音" : "开始语音输入"}
+                        >
+                            {isListening ? <MicOff size={20} /> : <Mic size={20} />}
+                        </button>
+                    </div>
+                    
+                    {/* Feedback Message */}
+                    {feedback && !isListening && (
+                        <div className={`text-sm text-center p-2 rounded-lg animate-in fade-in slide-in-from-top-1 ${feedback.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
+                            {feedback.message}
+                        </div>
+                    )}
+
+                    {isListening && (
+                        <p className="text-xs text-center text-indigo-600 font-medium animate-pulse">
+                            正在聆听... (说完后请再次点击按钮停止)
+                        </p>
+                    )}
                 </div>
             )}
 
