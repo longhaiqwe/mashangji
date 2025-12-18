@@ -121,9 +121,6 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
                 <Trash2 className="w-4 h-4 mr-2" />
                 清空所有记录
             </button>
-            <p className="text-center text-xs text-gray-400 mt-2">
-                用于测试 AI 导入功能，请谨慎操作
-            </p>
         </div>
       </div>
     </div>
