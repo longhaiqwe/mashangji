@@ -114,10 +114,10 @@ const App: React.FC = () => {
 
 
   // Load Data from Supabase
-  const refreshData = async () => {
+  const refreshData = async (silent = false) => {
     if (!user) return;
 
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
     try {
       const [loadedRecords, loadedCircles, loadedPrefs] = await Promise.all([
         Storage.fetchRecords(user.id),
@@ -132,7 +132,7 @@ const App: React.FC = () => {
     } catch (error) {
       console.error("Failed to sync data", error);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 

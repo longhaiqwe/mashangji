@@ -12,7 +12,7 @@ interface SettingsProps {
   user?: User | null;
   onLogout: () => void;
   onClearData?: () => void;
-  onDataRefresh?: () => void;
+  onDataRefresh?: (silent?: boolean) => void;
 }
 
 const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClearData, onDataRefresh }) => {
@@ -230,9 +230,10 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
 
         // Refresh data in parent
         if (onDataRefresh) {
-            onDataRefresh();
+            onDataRefresh(true);
         }
         
+        alert(`导入成功！\n新增圈子: ${newCirclesCount} 个\n新增记录: ${newRecords.length} 条`);
       } catch (error) {
         console.error('Import failed:', error);
         // User requested to remove alert content, so we just log it.
