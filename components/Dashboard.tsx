@@ -118,7 +118,10 @@ const Dashboard: React.FC<DashboardProps> = ({ records, circles, onDeleteRecord,
             <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${isCustomTheme ? 'bg-white/20 text-white' : 'bg-gray-200/50 text-gray-400'}`}>
               <Edit2 className="w-8 h-8" />
             </div>
-            <p className={`px-3 py-1 rounded-lg backdrop-blur-sm ${isCustomTheme ? 'bg-black/20 text-white' : 'bg-white/50 text-gray-500'}`}>暂无记录，快去记一笔吧</p>
+            <p className={`px-3 py-1 rounded-lg backdrop-blur-sm text-center ${isCustomTheme ? 'bg-black/20 text-white' : 'bg-white/50 text-gray-500'}`}>
+              暂无记录<br/>
+              <span className="text-xs opacity-80">💡 提示：长按底部“+”号可快速语音记账</span>
+            </p>
             <button
               onClick={() => onNavigate(ViewState.ADD_RECORD)}
               className="mt-4 text-mahjong-800 font-bold text-sm bg-white/90 px-4 py-2 rounded-full shadow-sm hover:scale-105 transition-transform"
