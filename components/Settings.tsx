@@ -269,7 +269,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
 
   const openPrivacyPolicy = () => {
       // TODO: Replace with your actual hosted Privacy Policy URL
-      window.open('https://github.com/longhai/mashangji/blob/main/AppStoreAssets/privacy-policy.md', '_blank');
+      window.open('https://github.com/longhaiqwe/mashangji/blob/main/AppStoreAssets/privacy-policy.md', '_blank');
   };
 
   const menuItems = [
@@ -423,7 +423,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
             <p className="text-xs text-gray-500 leading-relaxed">
               一款极简的个人麻将记账工具。数据存储于云端并按账号隔离，保障隐私。
               <br/>
-              Version 1.1.2
+              Version 1.0
             </p>
           </div>
         </div>
