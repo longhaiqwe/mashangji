@@ -114,6 +114,30 @@ export const deleteAllRecords = async (userId: string): Promise<void> => {
   }
 };
 
+export const deleteAllCircles = async (userId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('circles')
+    .delete()
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error deleting all circles:', error);
+    throw error;
+  }
+};
+
+export const deleteAllPreferences = async (userId: string): Promise<void> => {
+  const { error } = await supabase
+    .from('user_preferences')
+    .delete()
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error deleting preferences:', error);
+    throw error;
+  }
+};
+
 // --- Circles ---
 
 export const fetchCircles = async (userId: string): Promise<Circle[]> => {

@@ -47,6 +47,8 @@
 	<string>我们需要您的麦克风权限来识别语音战绩</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>我们需要语音识别权限来将您的语音转换为文字</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 </dict>

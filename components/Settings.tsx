@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { ViewState, User, Record, Circle } from '../types';
-import { Users, Palette, ChevronRight, Info, LogOut, UserCircle, Trash2, FileDown, FileUp, MessageSquare } from 'lucide-react';
+import { Users, Palette, ChevronRight, Info, LogOut, UserCircle, Trash2, FileDown, FileUp, MessageSquare, Shield, AlertTriangle } from 'lucide-react';
 import { authService } from '../services/authService';
 import { fetchRecords, fetchCircles, addRecordsBatch, syncCircles, generateId } from '../services/storageService';
 import { Capacitor } from '@capacitor/core';
@@ -247,6 +247,31 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
     fileInputRef.current?.click();
   };
 
+  const handleDeleteAccount = async () => {
+      if (!user) return;
+      
+      const confirmed = confirm(
+          '⚠️ 永久注销账号\n\n您确定要注销当前账号吗？\n\n1. 所有记账记录将被永久删除\n2. 所有圈子数据将被永久删除\n3. 账号将无法恢复'
+      );
+      
+      if (confirmed) {
+          const doubleCheck = confirm('最后确认：真的要删除所有数据并注销吗？此操作不可撤销！');
+          if (doubleCheck) {
+              try {
+                  await authService.deleteAccount(user.id);
+                  onLogout(); 
+              } catch (e: any) {
+                  alert(e.message || '注销失败');
+              }
+          }
+      }
+  };
+
+  const openPrivacyPolicy = () => {
+      // TODO: Replace with your actual hosted Privacy Policy URL
+      window.open('https://github.com/longhai/mashangji/blob/main/AppStoreAssets/privacy-policy.md', '_blank');
+  };
+
   const menuItems = [
     {
       id: 'circles',
@@ -268,6 +293,13 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
       icon: MessageSquare,
       onClick: () => onNavigate(ViewState.SETTINGS_FEEDBACK),
       desc: '提交建议或遇到的问题'
+    },
+    {
+      id: 'privacy',
+      label: '隐私政策',
+      icon: Shield,
+      onClick: openPrivacyPolicy,
+      desc: '查看数据隐私保护条款'
     }
   ];
 
@@ -397,14 +429,27 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
         </div>
 
         {/* Clear Data Button */}
-        <div className="pt-4 pb-8">
-            <button
-                onClick={handleClearAllRecords}
-                className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl border border-red-200 transition-colors flex items-center justify-center text-sm"
-            >
-                <Trash2 className="w-4 h-4 mr-2" />
-                清空所有记录
-            </button>
+        <div className="pt-4 pb-8 space-y-3">
+            <div className="flex gap-3">
+                <button
+                    onClick={handleClearAllRecords}
+                    className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold py-3 rounded-xl border border-orange-200 transition-colors flex items-center justify-center text-sm"
+                >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    清空记录
+                </button>
+
+                <button
+                    onClick={handleDeleteAccount}
+                    className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl border border-red-200 transition-colors flex items-center justify-center text-sm"
+                >
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    注销账号
+                </button>
+            </div>
+            <p className="text-[10px] text-center text-gray-400">
+                注销账号将永久删除所有数据，且不可恢复。
+            </p>
         </div>
       </div>
     </div>

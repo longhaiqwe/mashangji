@@ -1,6 +1,7 @@
 
 import { User } from '../types';
 import { supabase } from './supabase';
+import { deleteAllRecords, deleteAllCircles, deleteAllPreferences } from './storageService';
 
 const clearLocalSession = () => {
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -122,6 +123,42 @@ export const authService = {
     } catch (e) {
       console.warn("Get session timeout or error:", e);
       return null;
+    }
+  },
+
+  // Delete account (Delete data -> Sign out)
+  deleteAccount: async (userId: string): Promise<void> => {
+    try {
+      console.log('[AuthService] Deleting account data for:', userId);
+      // 1. Delete all user data
+      await Promise.all([
+        deleteAllRecords(userId),
+        deleteAllCircles(userId),
+        deleteAllPreferences(userId)
+      ]);
+      
+      console.log('[AuthService] Data deleted. Attempting to delete Auth user via RPC...');
+      
+      // 2. Try to delete the Auth user via RPC
+      // The updated SQL function returns the deleted user ID as a string
+      const { data: rpcData, error: rpcError } = await supabase.rpc('delete_user');
+      
+      if (rpcError) {
+          console.error('[AuthService] RPC delete_user FAILED:', rpcError);
+          console.warn('Falling back to local sign out. User data is gone, but Auth account remains.');
+          alert(`注销账号部分失败: 您的数据已清空，但账号本身未被服务器删除 (RPC Error: ${rpcError.message})。请联系开发者。`);
+      } else if (!rpcData) {
+          console.warn('[AuthService] RPC delete_user returned no data (User maybe already deleted?)');
+      } else {
+          console.log('[AuthService] Auth user deleted successfully. Deleted ID:', rpcData);
+      }
+
+      // 3. Sign out (Always do this to clear local session)
+      await authService.logout();
+      
+    } catch (error) {
+      console.error('[AuthService] Delete account error:', error);
+      throw new Error("注销账号失败，请重试或联系客服");
     }
   }
 };

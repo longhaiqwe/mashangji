@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { ViewState, UserPreferences } from '../types';
-import { ChevronLeft, Check, Image as ImageIcon, Upload } from 'lucide-react';
+import { ChevronLeft, Check } from 'lucide-react';
 
 interface ThemeSettingsProps {
   preferences: UserPreferences;
@@ -9,26 +9,6 @@ interface ThemeSettingsProps {
 }
 
 const ThemeSettings: React.FC<ThemeSettingsProps> = ({ preferences, onUpdatePreferences, onNavigate }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 4 * 1024 * 1024) {
-        alert("图片大小不能超过 4MB");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        onUpdatePreferences({
-          ...preferences,
-          backgroundImage: reader.result as string,
-          themeId: 'custom'
-        });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const themes = [
     { id: 'default', name: '简约灰 (默认)', color: 'bg-gray-50', preview: 'bg-gray-50' },
@@ -71,53 +51,7 @@ const ThemeSettings: React.FC<ThemeSettingsProps> = ({ preferences, onUpdatePref
               )}
             </button>
           ))}
-
-          {/* Custom Image Option */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className={`relative aspect-[3/5] rounded-xl overflow-hidden shadow-sm border-2 transition-all flex flex-col items-center justify-center bg-gray-100 ${preferences.themeId === 'custom' ? 'border-mahjong-600 ring-2 ring-mahjong-200' : 'border-dashed border-gray-300 hover:border-gray-400'
-              }`}
-          >
-            {preferences.themeId === 'custom' && preferences.backgroundImage ? (
-              <>
-                <img
-                  src={preferences.backgroundImage}
-                  alt="Custom"
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/20"></div>
-              </>
-            ) : null}
-
-            <div className="z-10 flex flex-col items-center p-4">
-              <div className="w-10 h-10 rounded-full bg-white/80 backdrop-blur flex items-center justify-center mb-2 shadow-sm">
-                {preferences.themeId === 'custom' ? <ImageIcon className="w-5 h-5 text-gray-700" /> : <Upload className="w-5 h-5 text-gray-500" />}
-              </div>
-              <span className={`text-xs font-bold ${preferences.themeId === 'custom' ? 'text-white text-shadow' : 'text-gray-500'}`}>
-                {preferences.themeId === 'custom' ? '更换图片' : '自定义图片'}
-              </span>
-            </div>
-
-            {preferences.themeId === 'custom' && (
-              <div className="absolute top-2 right-2 bg-mahjong-600 text-white p-1 rounded-full shadow-md z-20">
-                <Check className="w-3 h-3" />
-              </div>
-            )}
-          </button>
-
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept="image/*"
-            onChange={handleFileChange}
-          />
         </div>
-
-        <p className="text-xs text-gray-400 mt-6 text-center">
-          提示：上传您喜欢的图片作为背景（建议竖屏图片）。<br />
-          背景图将随账号偏好同步至云端，仅用于展示。
-        </p>
       </div>
     </div>
   );
