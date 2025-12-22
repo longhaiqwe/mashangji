@@ -447,9 +447,11 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
                     注销账号
                 </button>
             </div>
-            <p className="text-[10px] text-center text-gray-400">
-                注销账号将永久删除所有数据，且不可恢复。
-            </p>
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-red-100">
+                <p className="text-[10px] text-center text-gray-500">
+                    注销账号将永久删除所有数据，且不可恢复。
+                </p>
+            </div>
         </div>
       </div>
     </div>

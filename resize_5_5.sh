@@ -14,11 +14,13 @@ mkdir -p "$DEST_DIR"
 
 # 截图文件列表
 files=(
-    "01_Login.png"
-    "02_Dashboard.png"
-    "03_AddRecord.png"
-    "04_Statistics.png"
-    "05_Settings.png"
+    "01_login.png"
+    "02_dashboard.png"
+    "03_addrecord.png"
+    "04_statistics.png"
+    "05_settings.png"
+    "06_voice_import.png"
+    "07_batch_import.png"
 )
 
 for file in "${files[@]}"; do

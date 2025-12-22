@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Record, Circle, ViewState, UserPreferences, User } from './types';
 import * as Storage from './services/storageService';
 import { authService } from './services/authService';
+import { Network } from '@capacitor/network';
 import { DEFAULT_PREFERENCES, DEFAULT_CIRCLES } from './constants';
 import Dashboard from './components/Dashboard';
 import AddRecord from './components/AddRecord';
@@ -53,6 +54,28 @@ const App: React.FC = () => {
     };
 
     initAuth();
+
+    // Network Status Listener
+    Network.addListener('networkStatusChange', async (status) => {
+      console.log('Network status changed:', status.connected);
+      if (status.connected) {
+        // If we are not logged in, try checking session again.
+        // This helps if the app launched offline/blocked and then got permission.
+        // We only do this if we don't have a user yet.
+        if (!user) { // Note: 'user' from closure might be stale, but initAuth handles it. 
+          // Actually, inside useEffect, 'user' is the initial val (null).
+          // Better to just call initAuth again or a silent check.
+          // We can re-use logic similar to initAuth but without setting isInitializing=true to avoid flicker
+          try {
+            const currentUser = await authService.getCurrentUser();
+            if (mounted && currentUser) {
+              setUser(currentUser);
+              setView(ViewState.DASHBOARD);
+            }
+          } catch (e) { /* ignore */ }
+        }
+      }
+    });
 
     // Failsafe: Force initialization to finish after 3s max
     const timer = setTimeout(() => {
@@ -164,48 +187,48 @@ const App: React.FC = () => {
 
     const newRecords = Array.isArray(recordOrRecords) ? recordOrRecords : [recordOrRecords];
     const originalRecords = [...records];
-    
+
     // Check if it's an update or new (assuming batch is always new for now, but safe to check)
     // Actually, batch import from AI will always be new records with new IDs.
     // But for robustness, let's handle mixed cases if needed (though unlikely here).
-    
+
     try {
       // Optimistic Update
       let updatedRecords = [...records];
-      
+
       for (const record of newRecords) {
         const isUpdate = records.some(r => r.id === record.id);
         if (isUpdate) {
-            updatedRecords = updatedRecords.map(r => r.id === record.id ? record : r);
+          updatedRecords = updatedRecords.map(r => r.id === record.id ? record : r);
         } else {
-            updatedRecords = [record, ...updatedRecords];
+          updatedRecords = [record, ...updatedRecords];
         }
       }
-      
+
       // Sort by timestamp desc
       updatedRecords.sort((a, b) => b.timestamp - a.timestamp);
-      
+
       setRecords(updatedRecords);
       setView(ViewState.DASHBOARD);
 
       // Persist to DB
       const recordsToAdd: Record[] = [];
-      
+
       for (const record of newRecords) {
-         const isUpdate = originalRecords.some(r => r.id === record.id);
-         if (isUpdate) {
-             // For updates, we still do them one by one as they might be sparse
-             await Storage.updateRecord(record, user.id);
-         } else {
-             recordsToAdd.push(record);
-         }
+        const isUpdate = originalRecords.some(r => r.id === record.id);
+        if (isUpdate) {
+          // For updates, we still do them one by one as they might be sparse
+          await Storage.updateRecord(record, user.id);
+        } else {
+          recordsToAdd.push(record);
+        }
       }
 
       // Batch insert new records
       if (recordsToAdd.length > 0) {
-          await Storage.addRecordsBatch(recordsToAdd, user.id);
+        await Storage.addRecordsBatch(recordsToAdd, user.id);
       }
-      
+
       setEditingRecord(null); // Clear edit state
     } catch (e) {
       console.error(e);
@@ -286,12 +309,12 @@ const App: React.FC = () => {
   const handleClearData = async () => {
     if (!user) return;
     try {
-        await Storage.deleteAllRecords(user.id);
-        setRecords([]);
-        alert('已清空所有记录');
+      await Storage.deleteAllRecords(user.id);
+      setRecords([]);
+      alert('已清空所有记录');
     } catch (e) {
-        console.error(e);
-        alert('清空失败');
+      console.error(e);
+      alert('清空失败');
     }
   };
 
@@ -399,9 +422,9 @@ const App: React.FC = () => {
             setView(v);
           }}
           onVoiceEntry={() => {
-              setEditingRecord(null);
-              setAutoStartVoice(true);
-              setView(ViewState.ADD_RECORD);
+            setEditingRecord(null);
+            setAutoStartVoice(true);
+            setView(ViewState.ADD_RECORD);
           }}
         />
       )}
