@@ -176,14 +176,16 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
           <button
             onClick={async () => {
-              setLoading(true);
+              // setLoading(true); // Disable global loading to avoid "Small Ma Delight" screen flash
               try {
                 const user = await authService.loginWithApple();
-                onLoginSuccess(user);
+                if (user) {
+                  onLoginSuccess(user);
+                }
+                // If user is null, it means we are redirecting to Apple, so do nothing (don't set loading/success)
               } catch (err: any) {
                 setError(err.message);
-              } finally {
-                setLoading(false);
+                // setLoading(false);
               }
             }}
             disabled={loading}

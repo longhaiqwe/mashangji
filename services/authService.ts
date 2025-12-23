@@ -71,7 +71,7 @@ export const authService = {
   },
 
   // Apple Sign In
-  loginWithApple: async (): Promise<User> => {
+  loginWithApple: async (): Promise<User | null> => {
     // Proactively clear stale session
     clearLocalSession();
     try {
@@ -82,14 +82,19 @@ export const authService = {
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'apple',
           options: {
-            redirectTo: window.location.origin // Automatically returns to the current page after login
+            redirectTo: window.location.origin, // Automatically returns to the current page after login
+            skipBrowserRedirect: true // Get the auth URL directly to skip Supabase loading screens
           }
         });
 
         if (error) throw error;
-        // Note: signInWithOAuth redirects the page, so code below here won't execute immediately.
-        // The App.tsx onAuthStateChange listener will handle the successful login state upon return.
-        return {} as User; // Caller expects a User, return empty as placeholder while redirecting
+
+        // Manually redirect to the Apple Auth URL
+        if (data?.url) {
+          window.location.href = data.url;
+        }
+
+        return null; // Return null to indicate redirecting (caller should NOT set user state)
       }
 
       // NATIVE LOGIC: Use Capacitor Plugin
