@@ -48,10 +48,10 @@ export const authService = {
 
       if (error) {
         console.error('[AuthService] Login error:', JSON.stringify(error, null, 2));
-        
+
         // Handle "AuthRetryableFetchError" specifically (often network/CORS related in hybrid apps)
         if (error.name === 'AuthRetryableFetchError' || (error as any).isRetryable) {
-             throw new Error("网络连接失败，请检查您的网络设置（AuthRetryableFetchError）");
+          throw new Error("网络连接失败，请检查您的网络设置（AuthRetryableFetchError）");
         }
 
         throw new Error(mapSupabaseError(error.message));
@@ -67,6 +67,47 @@ export const authService = {
     } catch (err: any) {
       console.error('[AuthService] Login exception:', err);
       throw err;
+    }
+  },
+
+  // Apple Sign In
+  loginWithApple: async (): Promise<User> => {
+    // Proactively clear stale session
+    clearLocalSession();
+    try {
+      const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
+
+      const result = await SignInWithApple.authorize({
+        clientId: 'io.supabase.mashangji.service', // Updated to Service ID for Web/Android support
+        scopes: 'email name',
+        redirectURI: 'https://tkldusnrzmnnipvqswdz.supabase.co/auth/v1/callback',
+      });
+
+      if (result.response && result.response.identityToken) {
+        console.log('[AuthService] Apple Identity Token received. Aud:', result.response.identityToken.split('.')[1] ? JSON.parse(atob(result.response.identityToken.split('.')[1])).aud : 'unknown');
+
+        const { data, error } = await supabase.auth.signInWithIdToken({
+          provider: 'apple',
+          token: result.response.identityToken,
+          // nonce: 'nonce', // Removed to prevent mismatch issues
+        });
+
+        if (error) {
+          console.error('[AuthService] Supabase signInWithIdToken error:', JSON.stringify(error, null, 2));
+          throw new Error(mapSupabaseError(error.message));
+        }
+        if (!data.user) throw new Error("Apple 登录失败，未返回用户信息");
+
+        return mapSupabaseUser(data.user);
+      } else {
+        throw new Error("Apple 登录未返回有效 Token");
+      }
+    } catch (error: any) {
+      console.error('[AuthService] Apple Login error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      if (error?.message?.includes('canceled')) {
+        throw new Error('用户取消登录');
+      }
+      throw new Error("Apple 登录失败: " + (error.message || '未知错误'));
     }
   },
 
@@ -136,26 +177,26 @@ export const authService = {
         deleteAllCircles(userId),
         deleteAllPreferences(userId)
       ]);
-      
+
       console.log('[AuthService] Data deleted. Attempting to delete Auth user via RPC...');
-      
+
       // 2. Try to delete the Auth user via RPC
       // The updated SQL function returns the deleted user ID as a string
       const { data: rpcData, error: rpcError } = await supabase.rpc('delete_user');
-      
+
       if (rpcError) {
-          console.error('[AuthService] RPC delete_user FAILED:', rpcError);
-          console.warn('Falling back to local sign out. User data is gone, but Auth account remains.');
-          alert(`注销账号部分失败: 您的数据已清空，但账号本身未被服务器删除 (RPC Error: ${rpcError.message})。请联系开发者。`);
+        console.error('[AuthService] RPC delete_user FAILED:', rpcError);
+        console.warn('Falling back to local sign out. User data is gone, but Auth account remains.');
+        alert(`注销账号部分失败: 您的数据已清空，但账号本身未被服务器删除 (RPC Error: ${rpcError.message})。请联系开发者。`);
       } else if (!rpcData) {
-          console.warn('[AuthService] RPC delete_user returned no data (User maybe already deleted?)');
+        console.warn('[AuthService] RPC delete_user returned no data (User maybe already deleted?)');
       } else {
-          console.log('[AuthService] Auth user deleted successfully. Deleted ID:', rpcData);
+        console.log('[AuthService] Auth user deleted successfully. Deleted ID:', rpcData);
       }
 
       // 3. Sign out (Always do this to clear local session)
       await authService.logout();
-      
+
     } catch (error) {
       console.error('[AuthService] Delete account error:', error);
       throw new Error("注销账号失败，请重试或联系客服");
