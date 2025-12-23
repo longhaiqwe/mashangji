@@ -37,7 +37,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
       lines.push(`用户ID: ${user.id}`);
       lines.push('----------------------------------------');
       lines.push('');
-      
+
       lines.push('[圈子列表]');
       circles.forEach(c => {
         lines.push(`ID:${c.id} | 名称:${c.name} | 默认:${c.isDefault ? '是' : '否'}`);
@@ -61,28 +61,28 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
 
       if (Capacitor.isNativePlatform()) {
         try {
-            // Native Export Logic using Filesystem and Share
-            await Filesystem.writeFile({
-                path: fileName,
-                data: txtContent,
-                directory: Directory.Cache,
-                encoding: Encoding.UTF8
-            });
+          // Native Export Logic using Filesystem and Share
+          await Filesystem.writeFile({
+            path: fileName,
+            data: txtContent,
+            directory: Directory.Cache,
+            encoding: Encoding.UTF8
+          });
 
-            const fileResult = await Filesystem.getUri({
-                directory: Directory.Cache,
-                path: fileName
-            });
+          const fileResult = await Filesystem.getUri({
+            directory: Directory.Cache,
+            path: fileName
+          });
 
-            await Share.share({
-                title: '麻上记数据备份',
-                // text field is removed because it overrides the file content in some contexts or confuses the share sheet
-                files: [fileResult.uri], 
-                dialogTitle: '导出备份数据'
-            });
+          await Share.share({
+            title: '麻上记数据备份',
+            // text field is removed because it overrides the file content in some contexts or confuses the share sheet
+            files: [fileResult.uri],
+            dialogTitle: '导出备份数据'
+          });
         } catch (nativeError) {
-            console.error('Native export failed:', nativeError);
-            alert('导出失败，请检查文件权限');
+          console.error('Native export failed:', nativeError);
+          alert('导出失败，请检查文件权限');
         }
       } else {
         // Web Export Logic
@@ -114,17 +114,17 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
 
         const parsedCircles: Circle[] = [];
         const parsedRecords: any[] = [];
-        
+
         let currentSection = '';
 
         for (const line of lines) {
           const trimmedLine = line.trim();
           if (!trimmedLine) continue;
           if (trimmedLine.startsWith('[') && trimmedLine.endsWith(']')) {
-             if (trimmedLine.includes('圈子列表')) currentSection = 'circles';
-             else if (trimmedLine.includes('记账记录')) currentSection = 'records';
-             else currentSection = ''; // header or other sections
-             continue;
+            if (trimmedLine.includes('圈子列表')) currentSection = 'circles';
+            else if (trimmedLine.includes('记账记录')) currentSection = 'records';
+            else currentSection = ''; // header or other sections
+            continue;
           }
 
           if (currentSection === 'circles') {
@@ -141,19 +141,19 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
             // Parse Record: Date | Amount | CircleName | 备注:xxx | ID:xxx
             const match = trimmedLine.match(/^(.+?)\s*\|\s*([+-]?\d+)\s*\|\s*(.+?)\s*\|\s*备注:(.*?)\s*\|\s*ID:(.+?)$/);
             if (match) {
-               parsedRecords.push({
-                 date: match[1].trim(),
-                 amount: parseInt(match[2].trim(), 10),
-                 circleName: match[3].trim(),
-                 note: match[4].trim(),
-                 id: match[5].trim()
-               });
+              parsedRecords.push({
+                date: match[1].trim(),
+                amount: parseInt(match[2].trim(), 10),
+                circleName: match[3].trim(),
+                note: match[4].trim(),
+                id: match[5].trim()
+              });
             }
           }
         }
 
         if (parsedCircles.length === 0 && parsedRecords.length === 0) {
-            throw new Error('No valid data found');
+          throw new Error('No valid data found');
         }
 
         // Proceed directly without confirmation dialog
@@ -169,9 +169,9 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
             newCirclesCount++;
           }
         });
-        
+
         if (newCirclesCount > 0) {
-           await syncCircles(circlesToSync, user.id);
+          await syncCircles(circlesToSync, user.id);
         }
 
         // Refetch to ensure we have latest list including newly added ones
@@ -191,48 +191,48 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
           // But text record only has circleName.
           // Strategy: Find circle by Name in updatedCircles
           const matchedCircle = updatedCircles.find(c => c.name === pr.circleName);
-          
+
           if (matchedCircle) {
-              circleId = matchedCircle.id;
+            circleId = matchedCircle.id;
           } else {
-              // If circle name not found (e.g. user manually added record with new circle name),
-              // Create a new circle on the fly?
-              // For safety, let's create it if it doesn't exist.
-              const newCircleId = generateId();
-              const newCircle: Circle = {
-                  id: newCircleId,
-                  name: pr.circleName,
-                  isDefault: false
-              };
-              await syncCircles([...updatedCircles, newCircle], user.id);
-              updatedCircles.push(newCircle); // Update local cache
-              circleId = newCircleId;
-              newCirclesCount++; // Count this implicitly created circle
+            // If circle name not found (e.g. user manually added record with new circle name),
+            // Create a new circle on the fly?
+            // For safety, let's create it if it doesn't exist.
+            const newCircleId = generateId();
+            const newCircle: Circle = {
+              id: newCircleId,
+              name: pr.circleName,
+              isDefault: false
+            };
+            await syncCircles([...updatedCircles, newCircle], user.id);
+            updatedCircles.push(newCircle); // Update local cache
+            circleId = newCircleId;
+            newCirclesCount++; // Count this implicitly created circle
           }
 
           newRecords.push({
-              id: pr.id,
-              circleId: circleId,
-              amount: pr.amount,
-              date: pr.date,
-              note: pr.note,
-              timestamp: new Date(pr.date).getTime()
+            id: pr.id,
+            circleId: circleId,
+            amount: pr.amount,
+            date: pr.date,
+            note: pr.note,
+            timestamp: new Date(pr.date).getTime()
           });
         }
-        
+
         if (newRecords.length > 0) {
           await addRecordsBatch(newRecords, user.id);
         }
-        
+
         if (fileInputRef.current) {
-           fileInputRef.current.value = '';
+          fileInputRef.current.value = '';
         }
 
         // Refresh data in parent
         if (onDataRefresh) {
-            onDataRefresh(true);
+          onDataRefresh(true);
         }
-        
+
         alert(`导入成功！\n新增圈子: ${newCirclesCount} 个\n新增记录: ${newRecords.length} 条`);
       } catch (error) {
         console.error('Import failed:', error);
@@ -248,28 +248,28 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
   };
 
   const handleDeleteAccount = async () => {
-      if (!user) return;
-      
-      const confirmed = confirm(
-          '⚠️ 永久注销账号\n\n您确定要注销当前账号吗？\n\n1. 所有记账记录将被永久删除\n2. 所有圈子数据将被永久删除\n3. 账号将无法恢复'
-      );
-      
-      if (confirmed) {
-          const doubleCheck = confirm('最后确认：真的要删除所有数据并注销吗？此操作不可撤销！');
-          if (doubleCheck) {
-              try {
-                  await authService.deleteAccount(user.id);
-                  onLogout(); 
-              } catch (e: any) {
-                  alert(e.message || '注销失败');
-              }
-          }
+    if (!user) return;
+
+    const confirmed = confirm(
+      '⚠️ 永久注销账号\n\n您确定要注销当前账号吗？\n\n1. 所有记账记录将被永久删除\n2. 所有圈子数据将被永久删除\n3. 账号将无法恢复'
+    );
+
+    if (confirmed) {
+      const doubleCheck = confirm('最后确认：真的要删除所有数据并注销吗？此操作不可撤销！');
+      if (doubleCheck) {
+        try {
+          await authService.deleteAccount(user.id);
+          onLogout();
+        } catch (e: any) {
+          alert(e.message || '注销失败');
+        }
       }
+    }
   };
 
   const openPrivacyPolicy = () => {
-      // TODO: Replace with your actual hosted Privacy Policy URL
-      window.open('https://github.com/longhaiqwe/mashangji/blob/main/AppStoreAssets/privacy-policy.md', '_blank');
+    // TODO: Replace with your actual hosted Privacy Policy URL
+    window.open('https://github.com/longhaiqwe/mashangji/blob/main/AppStoreAssets/privacy-policy.md', '_blank');
   };
 
   const menuItems = [
@@ -322,22 +322,22 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
 
   const handleClearAllRecords = () => {
     if (confirm('⚠️ 危险操作\n\n确定要清空该账号下的所有记账记录吗？\n此操作不可恢复！')) {
-        if (onClearData) {
-            onClearData();
-        }
+      if (onClearData) {
+        onClearData();
+      }
     }
   };
 
   return (
     <div className="flex flex-col h-full bg-white/50">
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleImport} 
-        accept=".txt" 
-        className="hidden" 
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleImport}
+        accept=".txt"
+        className="hidden"
       />
-      
+
       <div className="bg-white/80 backdrop-blur-sm px-4 h-14 flex items-center justify-center border-b border-gray-200 shadow-sm sticky top-0 z-10">
         <h2 className="text-lg font-bold text-gray-800">设置</h2>
       </div>
@@ -345,22 +345,22 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
       <div className="p-4 space-y-4 overflow-y-auto">
         {/* User Profile Card */}
         <div className="bg-white/80 backdrop-blur-md rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
-           <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-mahjong-100 rounded-full flex items-center justify-center text-mahjong-600">
-                 <UserCircle className="w-8 h-8" />
-              </div>
-              <div>
-                 <h3 className="font-bold text-gray-800">{user?.username || '用户'}</h3>
-                 <p className="text-xs text-gray-500">已登录</p>
-              </div>
-           </div>
-           <button 
-              type="button"
-              onClick={handleLogout}
-              className="px-3 py-1.5 bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-500 text-xs font-bold rounded-lg transition-colors flex items-center cursor-pointer active:scale-95 border border-gray-200"
-           >
-              <LogOut className="w-3 h-3 mr-1" /> 退出
-           </button>
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-mahjong-100 rounded-full flex items-center justify-center text-mahjong-600">
+              <UserCircle className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-800">{user?.username || '用户'}</h3>
+              <p className="text-xs text-gray-500">已登录</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="px-3 py-1.5 bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-500 text-xs font-bold rounded-lg transition-colors flex items-center cursor-pointer active:scale-95 border border-gray-200"
+          >
+            <LogOut className="w-3 h-3 mr-1" /> 退出
+          </button>
         </div>
 
         <div className="bg-white/80 backdrop-blur-md rounded-xl overflow-hidden shadow-sm border border-gray-100">
@@ -422,36 +422,36 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
             <h3 className="text-xs font-bold text-gray-600 mb-1">关于麻上记</h3>
             <p className="text-xs text-gray-500 leading-relaxed">
               一款极简的个人麻将记账工具。数据存储于云端并按账号隔离，保障隐私。
-              <br/>
-              Version 1.0
+              <br />
+              Version 1.1.0
             </p>
           </div>
         </div>
 
         {/* Clear Data Button */}
         <div className="pt-4 pb-8 space-y-3">
-            <div className="flex gap-3">
-                <button
-                    onClick={handleClearAllRecords}
-                    className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold py-3 rounded-xl border border-orange-200 transition-colors flex items-center justify-center text-sm"
-                >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    清空记录
-                </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleClearAllRecords}
+              className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold py-3 rounded-xl border border-orange-200 transition-colors flex items-center justify-center text-sm"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              清空记录
+            </button>
 
-                <button
-                    onClick={handleDeleteAccount}
-                    className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl border border-red-200 transition-colors flex items-center justify-center text-sm"
-                >
-                    <AlertTriangle className="w-4 h-4 mr-2" />
-                    注销账号
-                </button>
-            </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-red-100">
-                <p className="text-[10px] text-center text-gray-500">
-                    注销账号将永久删除所有数据，且不可恢复。
-                </p>
-            </div>
+            <button
+              onClick={handleDeleteAccount}
+              className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl border border-red-200 transition-colors flex items-center justify-center text-sm"
+            >
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              注销账号
+            </button>
+          </div>
+          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-red-100">
+            <p className="text-[10px] text-center text-gray-500">
+              注销账号将永久删除所有数据，且不可恢复。
+            </p>
+          </div>
         </div>
       </div>
     </div>
