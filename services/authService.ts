@@ -80,7 +80,7 @@ export const authService = {
       const result = await SignInWithApple.authorize({
         clientId: 'io.supabase.mashangji.service', // Updated to Service ID for Web/Android support
         scopes: 'email name',
-        redirectURI: 'https://tkldusnrzmnnipvqswdz.supabase.co/auth/v1/callback',
+        redirectURI: 'https://xdvdxbjdtkzmyoqrgdmm.supabase.co/auth/v1/callback',
       });
 
       if (result.response && result.response.identityToken) {
