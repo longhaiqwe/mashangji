@@ -29,6 +29,8 @@ const App: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true); // New: Block UI until auth check is done
   const [editingRecord, setEditingRecord] = useState<Record | null>(null);
   const [autoStartVoice, setAutoStartVoice] = useState(false);
+  // Lifted state for filtering (also used for default selection in AddRecord)
+  const [selectedCircleId, setSelectedCircleId] = useState<string>('all');
 
   // Check Auth on Mount & Listen for Changes
   useEffect(() => {
@@ -337,7 +339,7 @@ const App: React.FC = () => {
               setEditingRecord(null);
               setAutoStartVoice(false);
             }}
-            initialCircleId={circles[0]?.id}
+            initialCircleId={selectedCircleId === 'all' ? undefined : selectedCircleId}
             initialRecord={editingRecord}
             initialAutoStartVoice={autoStartVoice}
           />
@@ -395,6 +397,8 @@ const App: React.FC = () => {
             onEditRecord={handleEditRecord}
             onNavigate={setView}
             themeId={preferences.themeId}
+            selectedCircleId={selectedCircleId}
+            onSelectCircle={setSelectedCircleId}
           />
         );
     }

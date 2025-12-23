@@ -10,11 +10,20 @@ interface DashboardProps {
   onEditRecord: (record: Record) => void;
   onNavigate: (view: ViewState) => void;
   themeId?: string;
+  selectedCircleId: string;
+  onSelectCircle: (id: string) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ records, circles, onDeleteRecord, onEditRecord, onNavigate, themeId = 'default' }) => {
-  const [selectedCircleId, setSelectedCircleId] = useState<string>('all');
-
+const Dashboard: React.FC<DashboardProps> = ({
+  records,
+  circles,
+  onDeleteRecord,
+  onEditRecord,
+  onNavigate,
+  themeId = 'default',
+  selectedCircleId,
+  onSelectCircle
+}) => {
   // Apply glass effect for any theme that isn't the default gray
   const isCustomTheme = themeId !== 'default';
 
@@ -89,7 +98,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, circles, onDeleteRecord,
         {/* Quick Filter Pill */}
         <div className="flex overflow-x-auto no-scrollbar space-x-3 pb-2">
           <button
-            onClick={() => setSelectedCircleId('all')}
+            onClick={() => onSelectCircle('all')}
             className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium transition-all ${filterButtonClass(selectedCircleId === 'all')}`}
           >
             全部
@@ -97,7 +106,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, circles, onDeleteRecord,
           {circles.map(circle => (
             <button
               key={circle.id}
-              onClick={() => setSelectedCircleId(circle.id)}
+              onClick={() => onSelectCircle(circle.id)}
               className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium transition-all ${filterButtonClass(selectedCircleId === circle.id)}`}
             >
               {circle.name}
@@ -119,7 +128,7 @@ const Dashboard: React.FC<DashboardProps> = ({ records, circles, onDeleteRecord,
               <Edit2 className="w-8 h-8" />
             </div>
             <p className={`px-3 py-1 rounded-lg backdrop-blur-sm text-center ${isCustomTheme ? 'bg-black/20 text-white' : 'bg-white/50 text-gray-500'}`}>
-              暂无记录<br/>
+              暂无记录<br />
               <span className="text-xs opacity-80">💡 提示：长按底部“+”号可快速语音记账</span>
             </p>
             <button
