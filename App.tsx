@@ -46,6 +46,8 @@ const App: React.FC = () => {
         }
       } catch (err) {
         console.warn("Auth check failed:", err);
+        // Show detailed error message to the user if needed, e.g., via a toast or alert
+        // For now, just log it.
       } finally {
         if (mounted) {
           setIsInitializing(false);
@@ -262,9 +264,11 @@ const App: React.FC = () => {
     try {
       setCircles(newCircles);
       await Storage.syncCircles(newCircles, user.id);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("圈子更新失败");
+      alert(`圈子更新失败: ${e.message || JSON.stringify(e)}`);
+      // Rollback
+      refreshData(true); // Re-fetch correct state from DB
     }
   };
 
@@ -381,7 +385,7 @@ const App: React.FC = () => {
             onDataRefresh={refreshData}
           />
         );
-      case ViewState.SETTINGS_CIRCLES:
+
       default:
         return (
           <Dashboard

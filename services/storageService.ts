@@ -187,11 +187,21 @@ export const syncCircles = async (circles: Circle[], userId: string): Promise<vo
 
   // 2. Delete circles not in the new list
   const currentIds = circles.map(c => c.id);
-  const { error: deleteError } = await supabase
+
+  const query = supabase
     .from('circles')
     .delete()
-    .eq('user_id', userId)
-    .not('id', 'in', `(${currentIds.map(id => `"${id}"`).join(',')})`); // Safe ID formatting
+    .eq('user_id', userId);
+
+  // If we have current circles, we only delete the ones NOT in this list
+  if (currentIds.length > 0) {
+    // PostgREST expects: (val1,val2,val3)
+    const filterValue = `(${currentIds.map(id => `"${id}"`).join(',')})`;
+    query.filter('id', 'not.in', filterValue);
+  }
+  // If currentIds is empty, we don't apply filter, effectively deleting all circles for this user (which is correct behavior)
+
+  const { error: deleteError } = await query;
 
   if (deleteError) throw deleteError;
 };
@@ -238,5 +248,5 @@ export const generateId = (): string => {
 // Legacy local storage functions removed to enforce cloud sync
 // kept fetchRecords, fetchCircles etc. as the new interface.
 export const getRecords = (userId?: string): Record[] => []; // Deprecated shim
-export const saveRecords = (records: Record[], userId?: string) => {}; // Deprecated shim
+export const saveRecords = (records: Record[], userId?: string) => { }; // Deprecated shim
 export const getCircles = (userId?: string): Circle[] => []; // Deprecated shim
