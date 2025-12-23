@@ -215,7 +215,16 @@ export const fetchPreferences = async (userId: string): Promise<UserPreferences>
     .eq('user_id', userId)
     .single();
 
-  if (error || !data) {
+  if (error) {
+    // PGRST116 means "The result contains 0 rows" (i.e. user has no prefs yet)
+    // 406 is "Not Acceptable" (often returned for .single() on empty result)
+    if (error.code !== 'PGRST116' && error.code !== '406') {
+      console.warn('Error fetching preferences (using defaults):', error.message);
+    }
+    return DEFAULT_PREFERENCES;
+  }
+
+  if (!data) {
     return DEFAULT_PREFERENCES;
   }
 

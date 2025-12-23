@@ -75,6 +75,24 @@ export const authService = {
     // Proactively clear stale session
     clearLocalSession();
     try {
+      const { Capacitor } = await import('@capacitor/core');
+
+      // WEB SPECIFIC LOGIC: Use standard Supabase OAuth
+      if (!Capacitor.isNativePlatform()) {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'apple',
+          options: {
+            redirectTo: window.location.origin // Automatically returns to the current page after login
+          }
+        });
+
+        if (error) throw error;
+        // Note: signInWithOAuth redirects the page, so code below here won't execute immediately.
+        // The App.tsx onAuthStateChange listener will handle the successful login state upon return.
+        return {} as User; // Caller expects a User, return empty as placeholder while redirecting
+      }
+
+      // NATIVE LOGIC: Use Capacitor Plugin
       const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
 
       const result = await SignInWithApple.authorize({
