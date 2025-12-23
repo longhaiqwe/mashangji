@@ -163,12 +163,19 @@ export const authService = {
   logout: async (): Promise<void> => {
     try {
       console.log('[AuthService] Signing out...');
-      await supabase.auth.signOut();
+      // Race signOut against a short timeout (e.g., 500ms)
+      // We don't want the user to wait if the server is slow/unreachable
+      await Promise.race([
+        supabase.auth.signOut(),
+        new Promise((resolve) => setTimeout(resolve, 500))
+      ]);
+
       clearLocalSession();
-      console.log('[AuthService] Sign out complete');
+      console.log('[AuthService] Sign out complete (or timed out)');
     } catch (error) {
       console.error('[AuthService] Sign out error:', error);
-      // Suppress error to ensure UI can still transition to login screen
+      // Suppress error and force clear ensuring UI can still transition
+      clearLocalSession();
     }
   },
 
