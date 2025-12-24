@@ -158,7 +158,7 @@ const App: React.FC = () => {
       setCircles(loadedCircles.length > 0 ? loadedCircles : DEFAULT_CIRCLES);
       setPreferences(loadedPrefs);
     } catch (error) {
-      console.error("Failed to sync data", error);
+      console.error("Failed to sync data", error instanceof Error ? error.message : JSON.stringify(error));
     } finally {
       if (!silent) setIsLoading(false);
     }

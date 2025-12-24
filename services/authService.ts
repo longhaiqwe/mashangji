@@ -77,8 +77,10 @@ export const authService = {
     try {
       const { Capacitor } = await import('@capacitor/core');
 
-      // WEB SPECIFIC LOGIC: Use standard Supabase OAuth
-      if (!Capacitor.isNativePlatform()) {
+      // WEB or ANDROID SPECIFIC LOGIC: Use standard Supabase OAuth
+      // Android native "SignInWithApple" plugin often requires complex setup or just wraps the web flow.
+      // For simplicity and compatibility, we use the Web flow for Android too.
+      if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() === 'android') {
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: 'apple',
           options: {
@@ -89,15 +91,15 @@ export const authService = {
 
         if (error) throw error;
 
-        // Manually redirect to the Apple Auth URL
+        // Manually redirect to the Apple Auth URL (Browser or Webview)
         if (data?.url) {
           window.location.href = data.url;
         }
 
-        return null; // Return null to indicate redirecting (caller should NOT set user state)
+        return null; // Return null to indicate redirecting
       }
 
-      // NATIVE LOGIC: Use Capacitor Plugin
+      // IOS NATIVE LOGIC: Use Capacitor Plugin
       const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
 
       const result = await SignInWithApple.authorize({

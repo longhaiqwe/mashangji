@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Dice5, ArrowRight, Lock, User as UserIcon, Mail } from 'lucide-react';
 import { authService } from '../services/authService';
 import { User } from '../types';
+import { Capacitor } from '@capacitor/core';
 
 interface LoginProps {
   onLoginSuccess: (user: User) => void;
@@ -83,39 +84,43 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <p className="text-gray-500 text-sm font-medium">麻上记 - 记录每一份好运</p>
           </div>
 
-          {/* Apple Login - Primary Option */}
-          <button
-            onClick={async () => {
-              try {
-                const user = await authService.loginWithApple();
-                if (user) {
-                  onLoginSuccess(user);
-                }
-              } catch (err: any) {
-                setError(err.message);
-              }
-            }}
-            disabled={loading}
-            className="w-full mb-8 py-4 bg-gray-900 text-white border border-transparent rounded-2xl font-bold text-lg shadow-lg shadow-gray-200 flex items-center justify-center transition-all duration-300 hover:bg-black hover:shadow-xl active:scale-[0.98] active:shadow-md group relative overflow-hidden"
-          >
-            {/* Shine effect */}
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shine" />
+          {/* Apple Login - Primary Option (Hidden on Android) */}
+          {Capacitor.getPlatform() !== 'android' && (
+            <>
+              <button
+                onClick={async () => {
+                  try {
+                    const user = await authService.loginWithApple();
+                    if (user) {
+                      onLoginSuccess(user);
+                    }
+                  } catch (err: any) {
+                    setError(err.message);
+                  }
+                }}
+                disabled={loading}
+                className="w-full mb-8 py-4 bg-gray-900 text-white border border-transparent rounded-2xl font-bold text-lg shadow-lg shadow-gray-200 flex items-center justify-center transition-all duration-300 hover:bg-black hover:shadow-xl active:scale-[0.98] active:shadow-md group relative overflow-hidden"
+              >
+                {/* Shine effect */}
+                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shine" />
 
-            <svg className="w-6 h-6 mr-3" viewBox="0 0 384 512" fill="currentColor">
-              <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 52.3-11.4 69.5-34.3z" />
-            </svg>
-            通过 Apple 登录
-          </button>
+                <svg className="w-6 h-6 mr-3" viewBox="0 0 384 512" fill="currentColor">
+                  <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 52.3-11.4 69.5-34.3z" />
+                </svg>
+                通过 Apple 登录
+              </button>
 
-          {/* Divider */}
-          <div className="relative mb-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-100"></div>
-            </div>
-            <div className="relative flex justify-center text-xs uppercase tracking-wider">
-              <span className="px-4 bg-white/50 backdrop-blur-sm text-gray-400 font-medium">或者使用邮箱</span>
-            </div>
-          </div>
+              {/* Divider */}
+              <div className="relative mb-8">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-100"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase tracking-wider">
+                  <span className="px-4 bg-white/50 backdrop-blur-sm text-gray-400 font-medium">或者使用邮箱</span>
+                </div>
+              </div>
+            </>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
@@ -192,8 +197,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               type="submit"
               disabled={loading}
               className={`w-full py-4 mt-4 rounded-2xl font-bold text-white shadow-lg flex items-center justify-center transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] ${loading
-                  ? 'bg-gray-300 cursor-not-allowed shadow-none'
-                  : 'bg-gradient-to-r from-mahjong-600 to-mahjong-500 hover:shadow-mahjong-500/40 shadow-mahjong-500/20'
+                ? 'bg-gray-300 cursor-not-allowed shadow-none'
+                : 'bg-gradient-to-r from-mahjong-600 to-mahjong-500 hover:shadow-mahjong-500/40 shadow-mahjong-500/20'
                 }`}
             >
               {loading ? (isRegistering ? '注册中...' : '登录中...') : (

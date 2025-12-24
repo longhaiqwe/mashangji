@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">麻上记</string>
+    <string name="title_activity_main">麻上记</string>
+    <string name="package_name">com.longhai.mashangji</string>
+    <string name="custom_url_scheme">com.longhai.mashangji</string>
+</resources>
