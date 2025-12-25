@@ -486,7 +486,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
             <p className="text-xs text-gray-500 leading-relaxed">
               一款极简的个人麻将记账工具。数据存储于云端并按账号隔离，保障隐私。
               <br />
-              Version 1.1.0
+              Version 1.1.1
             </p>
           </div>
         </div>
