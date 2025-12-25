@@ -315,12 +315,24 @@ const App: React.FC = () => {
   const handleClearData = async () => {
     if (!user) return;
     try {
+      setIsLoading(true);
+      // 1. Delete all records
       await Storage.deleteAllRecords(user.id);
       setRecords([]);
-      alert('已清空所有记录');
+
+      // 2. Delete all circles
+      await Storage.deleteAllCircles(user.id);
+      setCircles([]);
+
+      // 3. Refresh to trigger default circles re-creation
+      await refreshData(true); // silent refresh, but we already set loading true above if we wanted
+
+      alert('账户已重置：所有记录已清空，圈子已恢复默认。');
     } catch (e) {
       console.error(e);
-      alert('清空失败');
+      alert('重置失败，请重试');
+    } finally {
+      setIsLoading(false);
     }
   };
 

@@ -45,7 +45,8 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
       lines.push('');
 
       lines.push('[记账记录]');
-      // Format: Date | Amount | CircleName | Note | ID
+      // Format: Date | Amount | CircleName | Note
+      // ID is removed from export as per user request to be cleaner / note-friendly
       records.forEach(r => {
         const circle = circles.find(c => c.id === r.circleId);
         const circleName = circle ? circle.name : '未知圈子';
@@ -53,7 +54,8 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
         const safeNote = (r.note || '').replace(/\n/g, ' ');
         // Add explicit + sign for positive numbers for better readability
         const amountStr = r.amount > 0 ? `+${r.amount}` : `${r.amount}`;
-        lines.push(`${r.date} | ${amountStr} | ${circleName} | 备注:${safeNote} | ID:${r.id}`);
+        // Output format: Date | Amount | CircleName | Note
+        lines.push(`${r.date} | ${amountStr} | ${circleName} | 备注:${safeNote}`);
       });
 
       const txtContent = lines.join('\n');
@@ -138,15 +140,23 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
               });
             }
           } else if (currentSection === 'records') {
-            // Parse Record: Date | Amount | CircleName | 备注:xxx | ID:xxx
-            const match = trimmedLine.match(/^(.+?)\s*\|\s*([+-]?\d+)\s*\|\s*(.+?)\s*\|\s*备注:(.*?)\s*\|\s*ID:(.+?)$/);
+            // Parse Record: Date | Amount | CircleName | 备注:xxx [| ID:xxx]
+            // ID is now optional.
+            // Regex explanation:
+            // 1. Date
+            // 2. Amount
+            // 3. CircleName
+            // 4. Note
+            // 5. ID (Optional non-capturing group with capturing group inside)
+            const match = trimmedLine.match(/^(.+?)\s*\|\s*([+-]?\d+)\s*\|\s*(.+?)\s*\|\s*备注:(.*?)(?:\s*\|\s*ID:(.+?))?$/);
+
             if (match) {
               parsedRecords.push({
                 date: match[1].trim(),
                 amount: parseInt(match[2].trim(), 10),
                 circleName: match[3].trim(),
                 note: match[4].trim(),
-                id: match[5].trim()
+                id: match[5] ? match[5].trim() : undefined // Store ID if present, else undefined
               });
             }
           }
@@ -162,12 +172,37 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
         const circlesToSync = [...currentCircles];
         let newCirclesCount = 0;
 
-        // Merge logic: Add if ID doesn't exist
+        // NEW LOGIC: Prevent using IDs from the file for insertion.
+        // Reason: IDs from other accounts (or old backups) will conflict with existing rows in DB,
+        // causing RLS "new row violates..." error because we can't UPDATE someone else's row.
+
         parsedCircles.forEach(pc => {
-          if (!circlesToSync.some(c => c.id === pc.id)) {
-            circlesToSync.push(pc);
-            newCirclesCount++;
+          // 1. Check if we already have this circle by ID (exact match)
+          const existingById = circlesToSync.find(c => c.id === pc.id);
+          if (existingById) {
+            // We already have this circle, nothing to do.
+            return;
           }
+
+          // 2. Check if we have a circle by NAME (fuzzy match)
+          // Ideally we don't want duplicate "Mahjong" circles
+          const existingByName = circlesToSync.find(c => c.name === pc.name);
+          if (existingByName) {
+            // We have a circle with same name.
+            // We will map records to this circle later (by name matching).
+            // No need to create a new circle.
+            return;
+          }
+
+          // 3. If neither, it's a completely new circle to us.
+          // CRITICAL: Generate a NEW ID. Do NOT use pc.id.
+          const newCircle: Circle = {
+            id: generateId(), // New ID to avoid collision
+            name: pc.name,
+            isDefault: pc.isDefault // Respect default preference or logic? Maybe irrelevant for import
+          };
+          circlesToSync.push(newCircle);
+          newCirclesCount++;
         });
 
         if (newCirclesCount > 0) {
@@ -182,22 +217,40 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
         const newRecords: Record[] = [];
 
         for (const pr of parsedRecords) {
-          // Skip if ID already exists
-          if (currentRecords.some(r => r.id === pr.id)) continue;
+          // LOGIC 1: If ID is present (Old backup), check against ID
+          if (pr.id) {
+            if (currentRecords.some(r => r.id === pr.id)) continue;
+          } else {
+            // LOGIC 2: If ID is missing (New simplified backup), check against CONTENT to avoid duplicates
+            // We consider it a duplicate if: timestamp(date), amount, circleName(via ID), and note match.
+            // Note: This isn't perfect but prevents most accidental double-imports.
+
+            // First resolve circle ID to compare accurately
+            let targetCircleId = '';
+            const matchedCircle = updatedCircles.find(c => c.name === pr.circleName);
+            if (matchedCircle) targetCircleId = matchedCircle.id;
+
+            // Check for existence
+            const duplicate = currentRecords.find(r =>
+              r.date === pr.date &&
+              r.amount === pr.amount &&
+              r.note === pr.note &&
+              ((!targetCircleId && !r.circleId) || (r.circleId === targetCircleId))
+            );
+
+            if (duplicate) continue;
+          }
+
+          // If we are here, it's a new record to be added.
 
           // Resolve Circle ID
           let circleId = '';
-          // First try to find by ID if the record implicitly belongs to a circle we just imported/have
-          // But text record only has circleName.
-          // Strategy: Find circle by Name in updatedCircles
           const matchedCircle = updatedCircles.find(c => c.name === pr.circleName);
 
           if (matchedCircle) {
             circleId = matchedCircle.id;
           } else {
-            // If circle name not found (e.g. user manually added record with new circle name),
-            // Create a new circle on the fly?
-            // For safety, let's create it if it doesn't exist.
+            // Create new circle on the fly if needed
             const newCircleId = generateId();
             const newCircle: Circle = {
               id: newCircleId,
@@ -207,11 +260,11 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
             await syncCircles([...updatedCircles, newCircle], user.id);
             updatedCircles.push(newCircle); // Update local cache
             circleId = newCircleId;
-            newCirclesCount++; // Count this implicitly created circle
+            newCirclesCount++;
           }
 
           newRecords.push({
-            id: pr.id,
+            id: pr.id || generateId(), // Use existing ID if available, otherwise generate new one
             circleId: circleId,
             amount: pr.amount,
             date: pr.date,
@@ -234,10 +287,24 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
         }
 
         alert(`导入成功！\n新增圈子: ${newCirclesCount} 个\n新增记录: ${newRecords.length} 条`);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Import failed:', error);
-        // User requested to remove alert content, so we just log it.
-        // But maybe a toast would be better in future.
+
+        // Handle 403 Forbidden / RLS Policy Violations (Auth issue)
+        // Code 42501 is PostgreSQL insufficient_privilege
+        if (
+          error.status === 403 ||
+          error.code === '42501' ||
+          (error.message && (
+            error.message.includes('403') ||
+            error.message.includes('row-level security policy') ||
+            error.message.includes('violates row-level security')
+          ))
+        ) {
+          alert('导入失败：权限不足。\n\n这通常是因为登录已过期，请尝试退出登录后重新登录。');
+        } else {
+          alert(`导入失败: ${error.message || '请检查文件格式是否正确'}`);
+        }
       }
     };
     reader.readAsText(file);
@@ -321,7 +388,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
   ];
 
   const handleClearAllRecords = () => {
-    if (confirm('⚠️ 危险操作\n\n确定要清空该账号下的所有记账记录吗？\n此操作不可恢复！')) {
+    if (confirm('⚠️ 账户重置警告\n\n确定要清空所有数据吗？\n\n1. 所有记账记录将被永久删除\n2. 所有自定义圈子将被删除并恢复默认\n\n此操作不可恢复！')) {
       if (onClearData) {
         onClearData();
       }
