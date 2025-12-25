@@ -140,15 +140,9 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
               });
             }
           } else if (currentSection === 'records') {
-            // Parse Record: Date | Amount | CircleName | 备注:xxx [| ID:xxx]
-            // ID is now optional.
-            // Regex explanation:
-            // 1. Date
-            // 2. Amount
-            // 3. CircleName
-            // 4. Note
-            // 5. ID (Optional non-capturing group with capturing group inside)
-            const match = trimmedLine.match(/^(.+?)\s*\|\s*([+-]?\d+)\s*\|\s*(.+?)\s*\|\s*备注:(.*?)(?:\s*\|\s*ID:(.+?))?$/);
+            // Parse Record: Date | Amount | CircleName | 备注:xxx
+            // ID support removed as per request (legacy cleanup).
+            const match = trimmedLine.match(/^(.+?)\s*\|\s*([+-]?\d+)\s*\|\s*(.+?)\s*\|\s*备注:(.*?)$/);
 
             if (match) {
               parsedRecords.push({
@@ -156,7 +150,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
                 amount: parseInt(match[2].trim(), 10),
                 circleName: match[3].trim(),
                 note: match[4].trim(),
-                id: match[5] ? match[5].trim() : undefined // Store ID if present, else undefined
+                // id: undefined 
               });
             }
           }
@@ -217,38 +211,32 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
         const newRecords: Record[] = [];
 
         for (const pr of parsedRecords) {
-          // LOGIC 1: If ID is present (Old backup), check against ID
-          if (pr.id) {
-            if (currentRecords.some(r => r.id === pr.id)) continue;
-          } else {
-            // LOGIC 2: If ID is missing (New simplified backup), check against CONTENT to avoid duplicates
-            // We consider it a duplicate if: timestamp(date), amount, circleName(via ID), and note match.
-            // Note: This isn't perfect but prevents most accidental double-imports.
+          // Logic: Check against CONTENT to avoid duplicates
+          // We consider it a duplicate if: timestamp(date), amount, circleName(via ID), and note match.
 
-            // First resolve circle ID to compare accurately
-            let targetCircleId = '';
-            const matchedCircle = updatedCircles.find(c => c.name === pr.circleName);
-            if (matchedCircle) targetCircleId = matchedCircle.id;
+          // First resolve circle ID to compare accurately
+          let targetCircleId = '';
+          const matchedCircle = updatedCircles.find(c => c.name === pr.circleName);
+          if (matchedCircle) targetCircleId = matchedCircle.id;
 
-            // Check for existence
-            const duplicate = currentRecords.find(r =>
-              r.date === pr.date &&
-              r.amount === pr.amount &&
-              r.note === pr.note &&
-              ((!targetCircleId && !r.circleId) || (r.circleId === targetCircleId))
-            );
+          // Check for existence
+          const duplicate = currentRecords.find(r =>
+            r.date === pr.date &&
+            r.amount === pr.amount &&
+            r.note === pr.note &&
+            ((!targetCircleId && !r.circleId) || (r.circleId === targetCircleId))
+          );
 
-            if (duplicate) continue;
-          }
+          if (duplicate) continue;
 
           // If we are here, it's a new record to be added.
 
           // Resolve Circle ID
           let circleId = '';
-          const matchedCircle = updatedCircles.find(c => c.name === pr.circleName);
+          const matchedCircleForAdd = updatedCircles.find(c => c.name === pr.circleName);
 
-          if (matchedCircle) {
-            circleId = matchedCircle.id;
+          if (matchedCircleForAdd) {
+            circleId = matchedCircleForAdd.id;
           } else {
             // Create new circle on the fly if needed
             const newCircleId = generateId();
@@ -263,14 +251,16 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
             newCirclesCount++;
           }
 
-          // LOGIC 3: Check if this record is already in our pending batch (Internal Deduplication)
-          const pendingId = pr.id || '';
-          if (pendingId && newRecords.some(r => r.id === pendingId)) {
+          const newId = generateId();
+
+          // Internal Deduplication in batch
+          if (newRecords.some(r => r.id === newId)) {
+            // Extremely unlikely with generateId, but good practice
             continue;
           }
 
           newRecords.push({
-            id: pr.id || generateId(), // Use existing ID if available, otherwise generate new one
+            id: newId,
             circleId: circleId,
             amount: pr.amount,
             date: pr.date,
