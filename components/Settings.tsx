@@ -263,6 +263,12 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
             newCirclesCount++;
           }
 
+          // LOGIC 3: Check if this record is already in our pending batch (Internal Deduplication)
+          const pendingId = pr.id || '';
+          if (pendingId && newRecords.some(r => r.id === pendingId)) {
+            continue;
+          }
+
           newRecords.push({
             id: pr.id || generateId(), // Use existing ID if available, otherwise generate new one
             circleId: circleId,

@@ -61,7 +61,10 @@ export const addRecordsBatch = async (records: Record[], userId: string): Promis
     timestamp: record.timestamp,
   }));
 
-  const { error } = await supabase.from('records').insert(dbRecords);
+  const { error } = await supabase.from('records').upsert(dbRecords, {
+    onConflict: 'id',
+    ignoreDuplicates: true
+  });
 
   if (error) {
     console.error('Error adding batch records:', error);
