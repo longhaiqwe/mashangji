@@ -31,20 +31,20 @@ async function withRetry<T>(operation: () => Promise<T>, retries = 1): Promise<T
         console.warn('[Storage] Auth error detected, attempting session refresh...', err);
         const { data, error } = await supabase.auth.refreshSession();
         if (error) {
-           console.error('[Storage] Session refresh failed:', error);
-           // Don't return here, let the next retry (or final throw) handle it, 
-           // but effectively we can't fix it if refresh fails.
+          console.error('[Storage] Session refresh failed:', error);
+          // Don't return here, let the next retry (or final throw) handle it, 
+          // but effectively we can't fix it if refresh fails.
         } else if (data.session) {
-           console.log('[Storage] Session refreshed successfully.');
+          console.log('[Storage] Session refreshed successfully.');
         }
       } else if (isNetworkError) {
-         console.warn('[Storage] Network error, retrying in 1s...', err);
-         await new Promise(r => setTimeout(r, 1000));
+        console.warn('[Storage] Network error, retrying in 1s...', err);
+        await new Promise(r => setTimeout(r, 1000));
       } else {
-         // Unknown error, maybe just retry once?
-         console.warn('[Storage] Operation failed, retrying...', err);
+        // Unknown error, maybe just retry once?
+        console.warn('[Storage] Operation failed, retrying...', err);
       }
-      
+
       return withRetry(operation, retries - 1);
     }
     throw err;
@@ -213,15 +213,17 @@ export const fetchCircles = async (userId: string): Promise<Circle[]> => {
     const { data, error } = await supabase
       .from('circles')
       .select('*')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .order('sort_order', { ascending: true }); // Sort by order
 
     if (error) throw error;
 
     if (!data || data.length === 0) {
       // Initializing default circles for new user in DB
-      const newDefaultCircles = DEFAULT_CIRCLES.map(c => ({
+      const newDefaultCircles = DEFAULT_CIRCLES.map((c, index) => ({
         ...c,
-        id: generateId()
+        id: generateId(),
+        sortOrder: index // Use index as initial sort order
       }));
       await syncCircles(newDefaultCircles, userId);
       return newDefaultCircles;
@@ -231,6 +233,7 @@ export const fetchCircles = async (userId: string): Promise<Circle[]> => {
       id: item.id,
       name: item.name,
       isDefault: item.is_default,
+      sortOrder: item.sort_order, // Map from DB
     }));
   }).catch(error => {
     console.error('Error fetching circles:', error);
@@ -241,11 +244,12 @@ export const fetchCircles = async (userId: string): Promise<Circle[]> => {
 // Sync circles: Upsert current list and delete removed ones
 export const syncCircles = async (circles: Circle[], userId: string): Promise<void> => {
   // 1. Upsert all current circles
-  const dbCircles = circles.map(c => ({
+  const dbCircles = circles.map((c, index) => ({
     id: c.id,
     user_id: userId,
     name: c.name,
-    is_default: c.isDefault || false
+    is_default: c.isDefault || false,
+    sort_order: c.sortOrder ?? index // Persist order
   }));
 
   await withRetry(async () => {
@@ -284,7 +288,7 @@ export const fetchPreferences = async (userId: string): Promise<UserPreferences>
       .maybeSingle();
 
     if (error) throw error;
-    
+
     if (!data) return DEFAULT_PREFERENCES;
 
     return {

@@ -22,7 +22,11 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
   const [amount, setAmount] = useState<string>('');
   const [isWin, setIsWin] = useState<boolean>(true);
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [circleId, setCircleId] = useState<string>(initialCircleId || (circles[0]?.id || ''));
+  const [circleId, setCircleId] = useState<string>(() => {
+    if (initialCircleId) return initialCircleId;
+    const defaultCircle = circles.find(c => c.isDefault);
+    return defaultCircle ? defaultCircle.id : (circles[0]?.id || '');
+  });
   const [note, setNote] = useState<string>('');
   const [error, setError] = useState<string>('');
 
@@ -369,7 +373,8 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
   // Auto-select circle if none selected and circles exist
   useEffect(() => {
     if (!circleId && circles.length > 0) {
-      setCircleId(circles[0].id);
+      const defaultCircle = circles.find(c => c.isDefault);
+      setCircleId(defaultCircle ? defaultCircle.id : circles[0].id);
     }
   }, [circles, circleId]);
 
@@ -535,8 +540,54 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
     }
   };
 
+
+  // Swipe to Back Logic
+  const touchStartRef = React.useRef<{ x: number, y: number } | null>(null);
+  const touchMoveRef = React.useRef<{ x: number, y: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    // Only enable if starting from the left edge (e.g., first 40px)
+    if (touch.clientX <= 40) {
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    } else {
+      touchStartRef.current = null;
+    }
+    touchMoveRef.current = null;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const touch = e.touches[0];
+    touchMoveRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartRef.current || !touchMoveRef.current) return;
+
+    const deltaX = touchMoveRef.current.x - touchStartRef.current.x;
+    const deltaY = touchMoveRef.current.y - touchStartRef.current.y;
+
+    // Trigger back if:
+    // 1. Swiped right (positive deltaX)
+    // 2. Swiped enough distance (> 80px)
+    // 3. Horizontal movement is significantly larger than vertical movement (to avoid scrolling triggers)
+    if (deltaX > 80 && Math.abs(deltaY) < Math.abs(deltaX) * 0.8) {
+      onCancel();
+    }
+
+    // Reset
+    touchStartRef.current = null;
+    touchMoveRef.current = null;
+  };
+
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div
+      className="flex flex-col h-full bg-white transition-transform duration-200"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Header */}
       <div className="flex items-center px-4 h-14 border-b border-gray-100 flex-shrink-0">
         <button onClick={onCancel} className="p-2 -ml-2 text-gray-500">
@@ -556,118 +607,118 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
 
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col p-6 space-y-6 overflow-y-auto">
 
-        {/* Amount Input Section */}
-        <div className="flex flex-col items-center space-y-4">
-          <div className="flex w-full bg-gray-100 rounded-lg p-1">
-            <button
-              type="button"
-              onClick={() => setIsWin(true)}
-              className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${isWin ? 'bg-white text-win shadow-sm' : 'text-gray-400'}`}
-            >
-              赢了
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsWin(false)}
-              className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${!isWin ? 'bg-white text-loss shadow-sm' : 'text-gray-400'}`}
-            >
-              输了
-            </button>
-          </div>
+        {/* Compact Layout */}
+        <div className="flex flex-col space-y-6">
 
-          <div className="relative w-full">
-            <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-3xl font-bold ${isWin ? 'text-win' : 'text-loss'}`}>¥</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder="0.00"
-              value={amount}
-              onChange={handleAmountChange}
-              className={`w-full text-right pr-14 py-4 bg-gray-50 rounded-2xl text-4xl font-bold outline-none border-2 transition-colors ${error ? 'border-red-300' : 'border-transparent focus:border-mahjong-500'} ${isWin ? 'text-win' : 'text-loss'}`}
-              autoFocus={!initialRecord} // Don't auto-focus on edit to avoid jarring jump on mobile
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setImportMode('voice');
-                setShowImportModal(true);
-                // Don't rely on autoStartVoice effect for local interaction to avoid User Gesture loss
-                // Start listening immediately
-                toggleListening();
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
-              title="语音记账"
-            >
-              <Mic size={24} />
-            </button>
-          </div>
-          {error && <p className="text-red-500 text-xs">{error}</p>}
-        </div>
+          {/* Row 1: Circle & Date (Secondary Info) */}
+          <div className="flex items-center space-x-4">
+            {/* Circle Selector - Compact */}
+            <div className="flex-1 min-w-0">
+              <label className="text-xs text-gray-400 mb-1 block pl-1">圈子</label>
+              <div className="flex overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 space-x-2">
+                {circles.map(c => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setCircleId(c.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap border transition-all ${circleId === c.id ? 'bg-mahjong-50 border-mahjong-500 text-mahjong-700 font-bold' : 'bg-white border-gray-200 text-gray-600'}`}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {/* Details Form */}
-        <div className="space-y-4 pt-4">
-
-          {/* Circle Selector */}
-          <div className="space-y-2">
-            <label className="flex items-center text-sm font-medium text-gray-500">
-              <Users className="w-4 h-4 mr-2" /> 圈子
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {circles.map(c => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setCircleId(c.id)}
-                  className={`px-4 py-2 rounded-lg text-sm border transition-all ${circleId === c.id ? 'bg-mahjong-50 border-mahjong-500 text-mahjong-700 font-bold' : 'bg-white border-gray-200 text-gray-600'}`}
-                >
-                  {c.name}
-                </button>
-              ))}
-              {/* Fallback if no circles */}
-              {circles.length === 0 && <span className="text-xs text-red-400">请先去圈子管理添加圈子</span>}
+            {/* Date Picker - Compact */}
+            <div className="flex-none">
+              <label className="text-xs text-gray-400 mb-1 block pl-1">日期</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="py-1.5 px-3 bg-gray-50 rounded-lg border border-gray-200 text-xs text-center font-medium outline-none focus:ring-1 focus:ring-mahjong-500/20"
+              />
             </div>
           </div>
 
-          {/* Date Picker */}
-          <div className="space-y-2">
-            <label className="flex items-center text-sm font-medium text-gray-500">
-              <Calendar className="w-4 h-4 mr-2" /> 日期
-            </label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 text-gray-800 outline-none focus:ring-2 focus:ring-mahjong-500/20"
-            />
+          {/* Row 2: Win/Loss & Amount (Primary Input) */}
+          <div className="flex items-stretch space-x-3">
+            {/* Win/Loss Switch - Pill Shape */}
+            <div className="flex flex-col flex-none justify-center bg-gray-100 rounded-2xl p-1 w-20">
+              <button
+                type="button"
+                onClick={() => setIsWin(true)}
+                className={`flex-1 py-1 text-sm font-bold rounded-xl transition-all mb-1 ${isWin ? 'bg-white text-win shadow-sm' : 'text-gray-400'}`}
+              >
+                赢
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsWin(false)}
+                className={`flex-1 py-1 text-sm font-bold rounded-xl transition-all ${!isWin ? 'bg-white text-loss shadow-sm' : 'text-gray-400'}`}
+              >
+                输
+              </button>
+            </div>
+
+            {/* Amount Input - Prominent */}
+            <div className="flex-1 relative">
+              <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold ${isWin ? 'text-win' : 'text-loss'}`}>¥</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00"
+                value={amount}
+                onChange={handleAmountChange}
+                className={`w-full h-full text-right pr-4 py-2 pl-10 bg-gray-50 rounded-2xl text-4xl font-bold outline-none border-2 transition-colors ${error ? 'border-red-300' : 'border-transparent focus:border-mahjong-500'} ${isWin ? 'text-win' : 'text-loss'}`}
+                autoFocus={!initialRecord}
+              />
+            </div>
           </div>
 
-          {/* Note */}
-          <div className="space-y-2">
-            <label className="flex items-center text-sm font-medium text-gray-500">
-              <FileText className="w-4 h-4 mr-2" /> 备注 (选填)
-            </label>
-            <input
-              type="text"
-              placeholder="记录一下今天的手气..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              maxLength={20}
-              className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 text-gray-800 outline-none focus:ring-2 focus:ring-mahjong-500/20"
-            />
+          {/* Row 3: Note */}
+          <div>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <FileText className="w-4 h-4" />
+              </div>
+              <input
+                type="text"
+                placeholder="备注 (选填)"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                maxLength={20}
+                className="w-full py-3.5 pl-9 pr-10 bg-gray-50 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-mahjong-500/20"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setImportMode('voice');
+                  setShowImportModal(true);
+                  toggleListening();
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+              >
+                <Mic size={18} />
+              </button>
+            </div>
           </div>
 
         </div>
 
+        {/* Spacer to push content up if needed, though flex-col space-y handles it */}
         <div className="flex-1"></div>
+      </form>
 
-        {/* Submit Button */}
+      {/* Fixed Footer with Submit Button */}
+      <div className="flex-none p-4 border-t border-gray-100 bg-white z-10 safe-area-bottom">
         <button
-          type="submit"
+          onClick={(e) => handleSubmit(e as any)}
           className="w-full bg-mahjong-600 hover:bg-mahjong-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-mahjong-500/30 active:scale-[0.98] transition-all flex items-center justify-center"
         >
           <Check className="w-5 h-5 mr-2" /> {initialRecord ? '更新记录' : '保存'}
         </button>
-      </form>
+      </div>
 
       {/* Import Modal */}
       {showImportModal && (

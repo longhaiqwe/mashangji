@@ -3,6 +3,7 @@ export interface Circle {
   id: string;
   name: string;
   isDefault?: boolean;
+  sortOrder?: number;
 }
 
 export interface Record {
