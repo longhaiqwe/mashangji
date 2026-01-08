@@ -621,7 +621,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
                     key={c.id}
                     type="button"
                     onClick={() => setCircleId(c.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap border transition-all ${circleId === c.id ? 'bg-mahjong-50 border-mahjong-500 text-mahjong-700 font-bold' : 'bg-white border-gray-200 text-gray-600'}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap border transition-all ${circleId === c.id ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' : 'bg-white border-gray-200 text-gray-600'}`}
                   >
                     {c.name}
                   </button>
@@ -670,7 +670,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
                 placeholder="0.00"
                 value={amount}
                 onChange={handleAmountChange}
-                className={`w-full h-full text-right pr-4 py-2 pl-10 bg-gray-50 rounded-2xl text-4xl font-bold outline-none border-2 transition-colors ${error ? 'border-red-300' : 'border-transparent focus:border-mahjong-500'} ${isWin ? 'text-win' : 'text-loss'}`}
+                className={`w-full h-full text-right pr-4 py-2 pl-10 bg-gray-50 rounded-2xl text-4xl font-bold outline-none border-2 transition-colors ${error ? 'border-red-300' : 'border-transparent focus:border-primary-500'} ${isWin ? 'text-win' : 'text-loss'}`}
                 autoFocus={!initialRecord}
               />
             </div>
@@ -688,7 +688,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 maxLength={20}
-                className="w-full py-3.5 pl-9 pr-10 bg-gray-50 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-mahjong-500/20"
+                className="w-full py-3.5 pl-9 pr-10 bg-gray-50 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary-500/20"
               />
               <button
                 type="button"
@@ -714,7 +714,7 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
       <div className="flex-none p-4 border-t border-gray-100 bg-white z-10 safe-area-bottom">
         <button
           onClick={(e) => handleSubmit(e as any)}
-          className="w-full bg-mahjong-600 hover:bg-mahjong-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-mahjong-500/30 active:scale-[0.98] transition-all flex items-center justify-center"
+          className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary-500/30 active:scale-[0.98] transition-all flex items-center justify-center"
         >
           <Check className="w-5 h-5 mr-2" /> {initialRecord ? '更新记录' : '保存'}
         </button>

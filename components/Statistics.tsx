@@ -383,26 +383,33 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
   // Apply glass effect for any theme that isn't the default gray
   const isCustomTheme = themeId !== 'default';
 
+  // Theme logic: Mostly light/clean now.
+  const isDarkTheme = themeId === 'black' || themeId === 'rich';
+
+  // Constants for Chart Colors (using new Design System)
+  const COLOR_WIN = '#10b981'; // Emerald 500
+  const COLOR_LOSS = '#f43f5e'; // Rose 500
+  const COLOR_AXIS = '#cbd5e1'; // Slate 300
+  const COLOR_TEXT = '#64748b'; // Slate 500
+
   return (
-    <div className={`flex flex-col h-full ${isCustomTheme ? '' : 'bg-white/50'}`}>
+    <div className={`flex flex-col h-full overflow-hidden ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
       {/* Top Bar with Title and Tabs */}
-      <div className={`backdrop-blur-sm pt-4 px-4 pb-2 border-b flex flex-col sticky top-0 z-10 transition-colors ${isCustomTheme
-        ? 'bg-black/10 border-white/10 text-white'
-        : 'bg-white/80 border-gray-100 text-gray-800'
-        }`}>
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="font-bold text-lg">统计分析</h2>
-          <div className={`p-1 rounded-lg flex text-xs font-medium ${isCustomTheme ? 'bg-black/20' : 'bg-gray-100'}`}>
+      <div className={`pt-safe-top px-6 pb-4 flex-shrink-0 z-10 transition-colors`}>
+        <div className="flex justify-between items-center mb-6 mt-4">
+          <h2 className={`font-bold text-xl tracking-tight ${isDarkTheme ? 'text-white' : 'text-slate-900'}`}>统计分析</h2>
+
+          <div className={`p-1 rounded-full flex text-xs font-bold ${isDarkTheme ? 'bg-white/10' : 'bg-slate-100'}`}>
             {(['week', 'month', 'year', 'all'] as const).map(range => (
               <button
                 key={range}
                 onClick={() => {
                   setTimeRange(range);
-                  setCurrentDate(new Date()); // Reset date when switching tabs
+                  setCurrentDate(new Date());
                 }}
-                className={`px-3 py-1 rounded-md transition-all ${timeRange === range
-                  ? (isCustomTheme ? 'bg-white/20 text-white shadow-sm' : 'bg-white text-mahjong-600 shadow-sm')
-                  : (isCustomTheme ? 'text-white/60 hover:bg-white/10' : 'text-gray-500 hover:bg-gray-200')
+                className={`px-4 py-1.5 rounded-full transition-all duration-300 ${timeRange === range
+                  ? (isDarkTheme ? 'bg-white text-black shadow-md' : 'bg-white text-primary-600 shadow-sm ring-1 ring-black/5')
+                  : (isDarkTheme ? 'text-white/60 hover:bg-white/10' : 'text-slate-500 hover:bg-slate-200/50')
                   }`}
               >
                 {range === 'week' ? '周' : range === 'month' ? '月' : range === 'year' ? '年' : '全部'}
@@ -411,22 +418,22 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
           </div>
         </div>
 
-        {/* Date Navigator (Hidden for 'all') */}
+        {/* Date Navigator */}
         {timeRange !== 'all' && (
-          <div className="flex items-center justify-between pb-1 animate-fade-in-down">
+          <div className="flex items-center justify-between pb-2">
             <button
               onClick={() => handleNavigate('prev')}
-              className={`p-1 rounded-full ${isCustomTheme ? 'hover:bg-white/10' : 'hover:bg-gray-200'}`}
+              className={`p-2 rounded-full transition-colors ${isDarkTheme ? 'hover:bg-white/10 text-white' : 'hover:bg-slate-100 text-slate-600'}`}
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <div className="flex items-center font-bold text-sm">
-              <Calendar className="w-4 h-4 mr-2 opacity-70" />
+            <div className={`flex items-center font-bold text-base ${isDarkTheme ? 'text-white' : 'text-slate-700'}`}>
+              <Calendar className="w-4 h-4 mr-2 opacity-60" />
               {getDateLabel()}
             </div>
             <button
               onClick={() => handleNavigate('next')}
-              className={`p-1 rounded-full ${isCustomTheme ? 'hover:bg-white/10' : 'hover:bg-gray-200'}`}
+              className={`p-2 rounded-full transition-colors ${isDarkTheme ? 'hover:bg-white/10 text-white' : 'hover:bg-slate-100 text-slate-600'}`}
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -434,158 +441,117 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
         )}
       </div>
 
-      <div className="p-4 space-y-4 overflow-y-auto">
-        {timeRange === 'year' && (
-          <div className={`rounded-2xl p-4 shadow-sm border transition-colors ${isCustomTheme ? 'bg-black/20 border-white/10' : 'bg-white/90 border-gray-100'
-            }`}>
-            <div className="flex items-center justify-between">
-              <h3 className={`font-bold text-base ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>数据洞察</h3>
-              <span className={`text-xs ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>{insights.year} 年度</span>
-            </div>
-            {insights.totalGames === 0 ? (
-              <div className={`h-20 flex items-center justify-center text-sm ${isCustomTheme ? 'text-white/40' : 'text-gray-400'}`}>
-                暂无数据
-              </div>
-            ) : (
-              <>
-                <div className={`mt-3 grid grid-cols-2 gap-3`}>
-                  <div className={`backdrop-blur-sm rounded-xl p-3 border ${isCustomTheme ? 'bg-black/10 border-white/10' : 'bg-white border-gray-100'}`}>
-                    <div className={`text-xs ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>总场次</div>
-                    <div className={`text-xl font-bold ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>{insights.totalGames}</div>
-                  </div>
-                  <div className={`backdrop-blur-sm rounded-xl p-3 border ${isCustomTheme ? 'bg-black/10 border-white/10' : 'bg-white border-gray-100'}`}>
-                    <div className={`text-xs ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>获胜场次</div>
-                    <div className={`text-xl font-bold ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>{insights.wins} <span className={`text-xs font-normal ${isCustomTheme ? 'text-white/40' : 'text-gray-400'}`}>胜率 {insights.winRate}%</span></div>
-                  </div>
-                  <div className={`backdrop-blur-sm rounded-xl p-3 border col-span-2 ${isCustomTheme ? 'bg-black/10 border-white/10' : 'bg-white border-gray-100'}`}>
-                    <div className={`text-xs ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>总盈利(Net)</div>
-                    <div className={`text-2xl font-bold ${insights.net >= 0 ? 'text-red-500' : 'text-green-600'}`}>{insights.net > 0 ? `+${insights.net}` : `${insights.net}`}</div>
-                  </div>
-                  <div className={`backdrop-blur-sm rounded-xl p-3 border ${isCustomTheme ? 'bg-black/10 border-white/10' : 'bg-white border-gray-100'}`}>
-                    <div className={`text-xs ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>最大单笔赢</div>
-                    <div className={`text-lg font-bold ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>{insights.maxWinAmount > 0 ? `+${insights.maxWinAmount}` : '—'}</div>
-                    <div className={`text-xs ${isCustomTheme ? 'text-white/40' : 'text-gray-400'}`}>{insights.maxWinDate || ''}</div>
-                  </div>
-                  <div className={`backdrop-blur-sm rounded-xl p-3 border ${isCustomTheme ? 'bg-black/10 border-white/10' : 'bg-white border-gray-100'}`}>
-                    <div className={`text-xs ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>最大单笔亏损</div>
-                    <div className={`text-lg font-bold ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>{insights.maxLossAmount < 0 ? `${insights.maxLossAmount}` : '—'}</div>
-                    <div className={`text-xs ${isCustomTheme ? 'text-white/40' : 'text-gray-400'}`}>{insights.maxLossDate || ''}</div>
-                  </div>
-                </div>
-                <div className={`mt-4`}>
-                  <div className={`font-bold text-sm mb-2 ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>月度表现复盘</div>
-                  <ul className={`space-y-1 text-sm ${isCustomTheme ? 'text-white/80' : 'text-gray-700'}`}>
-                    {insights.monthlyRecap.map((t, idx) => (
-                      <li key={idx} className="leading-tight">• {t}</li>
-                    ))}
-                  </ul>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+      <div className="flex-1 px-5 space-y-5 overflow-y-auto pb-safe-bottom scrollbar-hide">
 
-        {/* Fortune Card - Dynamic "Yun Shi" */}
+        {/* Fortune Card - New Design */}
         {timeRange === 'week' && (
-          <div className={`rounded-xl p-4 shadow-sm border relative overflow-hidden transition-colors ${isCustomTheme ? 'bg-black/20 border-white/10' : 'bg-white/90 border-gray-100 text-gray-800'
-            }`}>
-            <div className={`absolute top-0 right-0 p-3 opacity-10 pointer-events-none`}>
-              <span className="text-6xl">
+          <div className={`rounded-3xl p-5 shadow-sm relative overflow-hidden ${isDarkTheme ? 'bg-slate-800' : 'bg-gradient-to-br from-indigo-50 to-white border border-indigo-50'}`}>
+            <div className="absolute -right-4 -top-4 opacity-10 pointer-events-none transform rotate-12">
+              <span style={{ fontSize: '100px' }}>
                 {fortune.type === 'good' ? '🧧' : fortune.type === 'bad' ? '🌧️' : fortune.type === 'warning' ? '⚡️' : '🍵'}
               </span>
             </div>
-            <div className="relative z-10 flex items-start justify-between">
-              <div>
-                <div className={`text-xs mb-1 font-medium ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>本周运势</div>
-                <h3 className={`text-xl font-bold mb-1 ${fortune.type === 'good' ? 'text-red-500' :
-                  fortune.type === 'bad' ? 'text-green-600' :
-                    fortune.type === 'warning' ? 'text-orange-500' :
-                      (isCustomTheme ? 'text-white' : 'text-gray-700')
-                  }`}>
-                  {fortune.title}
-                </h3>
-                <p className={`text-xs ${isCustomTheme ? 'text-white/70' : 'text-gray-500'}`}>
-                  {fortune.description}
-                </p>
+
+            <div className="relative z-10">
+              <div className="flex items-center space-x-2 mb-2">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isDarkTheme ? 'bg-white/10 text-white/70' : 'bg-white/60 text-indigo-400'
+                  }`}>本周运势</span>
               </div>
+              <h3 className={`text-2xl font-black mb-1.5 ${fortune.type === 'good' ? 'text-primary-600' :
+                  fortune.type === 'bad' ? 'text-rose-500' :
+                    fortune.type === 'warning' ? 'text-orange-500' :
+                      'text-slate-700'
+                }`}>
+                {fortune.title}
+              </h3>
+              <p className={`text-sm font-medium ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
+                {fortune.description}
+              </p>
             </div>
           </div>
         )}
 
-        {/* Overview Cards */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className={`rounded-2xl p-4 text-white shadow-lg col-span-2 transition-all duration-300 ${isCustomTheme
-            ? 'backdrop-blur-sm border border-white/20'
-            : 'bg-mahjong-600 shadow-mahjong-500/20'
+        {/* Overview Stats Cards */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className={`rounded-3xl p-5 col-span-2 shadow-lg transition-all ${isDarkTheme ? 'bg-slate-800' : 'bg-slate-900 text-white shadow-slate-200'
             }`}>
-            <div className={`text-sm mb-1 ${isCustomTheme ? 'text-white/80' : 'text-emerald-100'}`}>
-              {timeRange === 'all' ? '总盈亏' : '期间盈亏'}
+            <div className={`text-sm font-medium mb-1 opacity-80`}>
+              {timeRange === 'all' ? '总亏盈 (Total)' : '期间盈亏 (Net)'}
             </div>
-            <div className="text-3xl font-bold">{stats.totalPnL > 0 ? '+' : ''}{stats.totalPnL}</div>
+            <div className={`text-4xl font-bold font-mono tracking-tight`}>
+              {stats.totalPnL > 0 ? '+' : ''}{stats.totalPnL}
+            </div>
           </div>
 
-          <div className={`backdrop-blur-sm rounded-xl p-4 shadow-sm border transition-colors ${isCustomTheme ? 'bg-black/20 border-white/10' : 'bg-white/90 border-gray-100'
-            }`}>
-            <div className={`text-xs mb-1 ${isCustomTheme ? 'text-white/60' : 'text-gray-400'}`}>场次</div>
-            <div className={`text-xl font-bold ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>
-              {stats.totalGames} <span className={`text-xs font-normal ${isCustomTheme ? 'text-white/40' : 'text-gray-400'}`}>场</span>
+          <div className={`rounded-2xl p-4 shadow-sm border ${isDarkTheme ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+            <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDarkTheme ? 'text-slate-400' : 'text-slate-400'}`}>场次</div>
+            <div className={`text-2xl font-bold ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
+              {stats.totalGames} <span className="text-xs font-normal text-slate-400">场</span>
             </div>
           </div>
-          <div className={`backdrop-blur-sm rounded-xl p-4 shadow-sm border transition-colors ${isCustomTheme ? 'bg-black/20 border-white/10' : 'bg-white/90 border-gray-100'
-            }`}>
-            <div className={`text-xs mb-1 ${isCustomTheme ? 'text-white/60' : 'text-gray-400'}`}>胜率</div>
-            <div className={`text-xl font-bold ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>
+
+          <div className={`rounded-2xl p-4 shadow-sm border ${isDarkTheme ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+            <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDarkTheme ? 'text-slate-400' : 'text-slate-400'}`}>胜率</div>
+            <div className={`text-2xl font-bold ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
               {stats.totalGames > 0 ? Math.round((stats.totalWins / stats.totalGames) * 100) : 0}
-              <span className={`text-xs font-normal ${isCustomTheme ? 'text-white/40' : 'text-gray-400'}`}>%</span>
+              <span className="text-xs font-normal text-slate-400">%</span>
             </div>
           </div>
         </div>
 
-        {/* Trend Chart - Only show for week/month/year views */}
+        {/* Trend Chart */}
         {timeRange !== 'all' && trendData.length > 0 && (
-          <div className={`backdrop-blur-sm rounded-2xl p-4 shadow-sm border min-h-[300px] transition-colors ${isCustomTheme ? 'bg-black/20 border-white/10' : 'bg-white/90 border-gray-100'
-            }`}>
-            <h3 className={`font-bold text-sm mb-4 ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>
-              {timeRange === 'week' ? '每日战绩趋势' : timeRange === 'month' ? '每周战绩趋势' : '每月战绩趋势'}
+          <div className={`rounded-3xl p-5 shadow-sm border min-h-[320px] pb-8 ${isDarkTheme ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+            <h3 className={`font-bold text-sm mb-6 ${isDarkTheme ? 'text-slate-300' : 'text-slate-800'}`}>
+              {timeRange === 'week' ? '每日走势' : timeRange === 'month' ? '周度走势' : '月度走势'}
             </h3>
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData} margin={{ top: 5, right: 20, left: 0, bottom: 20 }}>
+                <LineChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke={isCustomTheme ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}
+                    vertical={false}
+                    stroke={isDarkTheme ? '#334155' : '#f1f5f9'}
                   />
                   <XAxis
                     dataKey="label"
-                    tick={{ fontSize: timeRange === 'year' ? 10 : 12, fill: isCustomTheme ? '#eee' : '#666' }}
-                    stroke={isCustomTheme ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'}
-                    interval={0}
-                    angle={timeRange === 'year' ? -45 : 0}
-                    textAnchor={timeRange === 'year' ? 'end' : 'middle'}
-                    height={timeRange === 'year' ? 60 : 30}
+                    tick={{ fontSize: 10, fill: COLOR_TEXT }}
+                    axisLine={false}
+                    tickLine={false}
+                    dy={10}
+                    interval={timeRange === 'week' ? 0 : 'preserveStartEnd'}
                   />
                   <YAxis
-                    tick={{ fontSize: 12, fill: isCustomTheme ? '#eee' : '#666' }}
-                    stroke={isCustomTheme ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'}
+                    tick={{ fontSize: 10, fill: COLOR_TEXT }}
+                    axisLine={false}
+                    tickLine={false}
                   />
                   <Tooltip
-                    formatter={(value: number) => [`¥${value}`, '盈亏']}
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: 'none',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      color: '#333'
+                    cursor={{ stroke: COLOR_AXIS, strokeWidth: 1, strokeDasharray: '4 4' }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const val = payload[0].value as number;
+                        return (
+                          <div className="bg-white p-3 rounded-xl shadow-xl border border-slate-100 text-xs text-slate-600">
+                            <div className="font-bold text-slate-800 mb-1">{payload[0].payload.label}</div>
+                            <div className={`font-mono text-sm font-bold ${val >= 0 ? 'text-primary-600' : 'text-rose-500'}`}>
+                              {val > 0 ? '+' : ''}{val}
+                            </div>
+                          </div>
+                        )
+                      }
+                      return null;
                     }}
                   />
-                  <ReferenceLine y={0} stroke={isCustomTheme ? "#888" : "#9ca3af"} strokeWidth={2} />
+                  <ReferenceLine y={0} stroke={isDarkTheme ? "#475569" : "#cbd5e1"} />
                   <Line
                     type="monotone"
                     dataKey="amount"
-                    stroke={isCustomTheme ? '#ef4444' : '#ef4444'}
+                    stroke={COLOR_WIN} // We generally use the primary color for the line
                     strokeWidth={3}
-                    dot={{ fill: '#ef4444', r: 4 }}
-                    activeDot={{ r: 6 }}
+                    dot={{ fill: 'white', stroke: COLOR_WIN, strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, fill: COLOR_WIN, stroke: 'white', strokeWidth: 2 }}
+                    animationDuration={1000}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -593,46 +559,94 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
           </div>
         )}
 
-        {/* Chart */}
-        <div className={`backdrop-blur-sm rounded-2xl p-4 shadow-sm border min-h-[300px] transition-colors ${isCustomTheme ? 'bg-black/20 border-white/10' : 'bg-white/90 border-gray-100'
-          }`}>
-          <h3 className={`font-bold text-sm mb-4 ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>圈子盈亏分布</h3>
+        {/* Distribution Chart */}
+        <div className={`rounded-3xl p-5 shadow-sm border min-h-[300px] ${isDarkTheme ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+          <h3 className={`font-bold text-sm mb-4 ${isDarkTheme ? 'text-slate-300' : 'text-slate-800'}`}>圈子盈亏分布</h3>
           {stats.chartData.length > 0 ? (
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.chartData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <BarChart data={stats.chartData} layout="vertical" margin={{ top: 0, right: 30, left: 30, bottom: 0 }}>
                   <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 12, fill: isCustomTheme ? '#eee' : '#666' }} />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    width={80}
+                    tick={{ fontSize: 12, fill: isDarkTheme ? '#cbd5e1' : '#475569', fontWeight: 500 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
                   <Tooltip
-                    formatter={(value: number) => [`¥${value}`, '盈亏']}
-                    cursor={{ fill: 'transparent' }}
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: 'none',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      color: '#333'
+                    cursor={{ fill: isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const val = payload[0].value as number;
+                        return (
+                          <div className="bg-white p-3 rounded-xl shadow-xl border border-slate-100 text-xs text-slate-600">
+                            <div className="font-bold text-slate-800 mb-1">{payload[0].payload.name}</div>
+                            <div className={`font-mono text-sm font-bold ${val >= 0 ? 'text-primary-600' : 'text-rose-500'}`}>
+                              {val > 0 ? '+' : ''}{val}
+                            </div>
+                          </div>
+                        )
+                      }
+                      return null;
                     }}
                   />
-                  <ReferenceLine x={0} stroke={isCustomTheme ? "#666" : "#9ca3af"} />
-                  <Bar dataKey="amount" radius={[0, 4, 4, 0]} barSize={20}>
+                  <ReferenceLine x={0} stroke={isDarkTheme ? "#475569" : "#e2e8f0"} />
+                  <Bar dataKey="amount" radius={[0, 4, 4, 0]} barSize={24}>
                     {stats.chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.amount >= 0 ? '#ef4444' : '#16a34a'} />
+                      <Cell key={`cell-${index}`} fill={entry.amount >= 0 ? COLOR_WIN : COLOR_LOSS} />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className={`h-40 flex items-center justify-center text-sm ${isCustomTheme ? 'text-white/40' : 'text-gray-300'}`}>
-              该时段暂无数据
+            <div className={`h-40 flex items-center justify-center text-sm ${isDarkTheme ? 'text-slate-500' : 'text-slate-400'}`}>
+              <div className="text-center">
+                <div className="text-2xl mb-2 opacity-50">📊</div>
+                该时段暂无数据
+              </div>
             </div>
           )}
         </div>
 
-        <div className={`text-center text-xs pt-4 rounded-lg py-2 ${isCustomTheme ? 'text-white/40 bg-black/10' : 'text-gray-400 bg-white/40'}`}>
-          红为赢，绿为输
-        </div>
+        {/* Year Insights (Only show in Year view) */}
+        {timeRange === 'year' && (
+          <div className={`rounded-3xl p-5 shadow-sm border mb-8 ${isDarkTheme ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+            <h3 className={`font-bold text-base mb-4 ${isDarkTheme ? 'text-white' : 'text-slate-900'}`}>{insights.year} 年度复盘</h3>
+
+            {insights.totalGames > 0 ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className={`p-3 rounded-2xl ${isDarkTheme ? 'bg-white/5' : 'bg-slate-50'}`}>
+                    <div className="text-xs text-slate-500 mb-1">最大单笔盈利</div>
+                    <div className="text-primary-600 font-bold font-mono text-lg">{insights.maxWinAmount > 0 ? '+' + insights.maxWinAmount : '-'}</div>
+                    <div className="text-[10px] text-slate-400">{insights.maxWinDate}</div>
+                  </div>
+                  <div className={`p-3 rounded-2xl ${isDarkTheme ? 'bg-white/5' : 'bg-slate-50'}`}>
+                    <div className="text-xs text-slate-500 mb-1">最大单笔亏损</div>
+                    <div className="text-rose-500 font-bold font-mono text-lg">{insights.maxLossAmount < 0 ? insights.maxLossAmount : '-'}</div>
+                    <div className="text-[10px] text-slate-400">{insights.maxLossDate}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {insights.monthlyRecap.map((t, i) => (
+                    <div key={i} className={`text-xs px-3 py-2 rounded-lg flex items-start ${isDarkTheme ? 'bg-white/5 text-slate-300' : 'bg-slate-50 text-slate-600'}`}>
+                      <span className="mr-2 mt-0.5 text-primary-500 font-bold">•</span>
+                      {t}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-slate-400 py-4 text-sm">暂无年度数据</div>
+            )}
+          </div>
+        )}
+
+        <div className="h-20"></div>
       </div>
     </div>
   );

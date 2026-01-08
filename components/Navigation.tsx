@@ -14,25 +14,25 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onChangeView, onVo
 
   const handleTouchStart = (view: ViewState) => {
     if (view === ViewState.ADD_RECORD && onVoiceEntry) {
-        isLongPress.current = false;
-        longPressTimer.current = setTimeout(() => {
-            isLongPress.current = true;
-            // Haptic feedback if available (Web Vibration API)
-            if (navigator.vibrate) navigator.vibrate(50);
-            onVoiceEntry();
-        }, 800); // 800ms threshold
+      isLongPress.current = false;
+      longPressTimer.current = setTimeout(() => {
+        isLongPress.current = true;
+        // Haptic feedback if available (Web Vibration API)
+        if (navigator.vibrate) navigator.vibrate(50);
+        onVoiceEntry();
+      }, 800); // 800ms threshold
     }
   };
 
   const handleTouchEnd = (view: ViewState) => {
     if (longPressTimer.current) {
-        clearTimeout(longPressTimer.current);
-        longPressTimer.current = null;
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
     }
-    
+
     // Only trigger normal click if it wasn't a long press
     if (!isLongPress.current) {
-        onChangeView(view);
+      onChangeView(view);
     }
     isLongPress.current = false;
   };
@@ -55,12 +55,12 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onChangeView, onVo
   ];
 
   return (
-    <div className="bg-white/90 backdrop-blur-md border-t border-gray-200 pb-[env(safe-area-inset-bottom)] relative z-20">
+    <div className="bg-white/90 backdrop-blur-md border-t border-slate-200 pb-[env(safe-area-inset-bottom)] relative z-20">
       <div className="flex justify-around items-end h-16 pb-1">
         {navItems.map((item) => {
           const isActive = activeView === item.view;
           const Icon = item.icon;
-          
+
           if (item.highlight) {
             return (
               <button
@@ -69,20 +69,20 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onChangeView, onVo
                 onMouseDown={() => handleTouchStart(item.view)}
                 onMouseUp={() => handleTouchEnd(item.view)}
                 onMouseLeave={() => {
-                    if (longPressTimer.current) {
-                        clearTimeout(longPressTimer.current);
-                        longPressTimer.current = null;
-                    }
+                  if (longPressTimer.current) {
+                    clearTimeout(longPressTimer.current);
+                    longPressTimer.current = null;
+                  }
                 }}
                 // Touch events for mobile
                 onTouchStart={() => handleTouchStart(item.view)}
                 onTouchEnd={(e) => {
-                    e.preventDefault(); // Prevent ghost click
-                    handleTouchEnd(item.view);
+                  e.preventDefault(); // Prevent ghost click
+                  handleTouchEnd(item.view);
                 }}
                 className="flex flex-col items-center justify-center -mt-8 select-none touch-none"
               >
-                <div className="bg-mahjong-600 rounded-full p-4 shadow-lg border-4 border-gray-50 transform transition-transform active:scale-95">
+                <div className="bg-primary-600 rounded-full p-4 shadow-lg shadow-emerald-500/30 border-4 border-slate-50 transform transition-transform active:scale-95">
                   <Icon className="w-8 h-8 text-white" />
                 </div>
                 <span className="text-xs font-medium text-gray-500 mt-1">{item.label}</span>
@@ -94,9 +94,8 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onChangeView, onVo
             <button
               key={item.view}
               onClick={() => onChangeView(item.view)}
-              className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
-                isActive ? 'text-mahjong-600' : 'text-gray-400'
-              }`}
+              className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${isActive ? 'text-primary-600' : 'text-slate-400'
+                }`}
             >
               <Icon className={`w-6 h-6 ${isActive ? 'fill-current' : ''}`} strokeWidth={isActive ? 2.5 : 2} />
               <span className="text-[10px] font-medium">{item.label}</span>

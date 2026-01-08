@@ -284,33 +284,42 @@ const App: React.FC = () => {
     return records.some(r => r.circleId === circleId);
   };
 
-  const getBackgroundStyle = () => {
-    if (view === ViewState.LOGIN) return { backgroundColor: '#f9fafb' };
+  const getThemeConfig = () => {
+    if (view === ViewState.LOGIN) return { className: 'bg-slate-50', style: {} };
 
     if (preferences.themeId === 'custom' && preferences.backgroundImage) {
-      return { backgroundImage: `url(${preferences.backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' };
+      return {
+        className: 'bg-slate-900', // Fallback
+        style: { backgroundImage: `url(${preferences.backgroundImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+      };
     }
+
     switch (preferences.themeId) {
       case 'green':
-        return { background: 'linear-gradient(to bottom right, #166534, #15803d, #14532d)' }; // Deeper Green
+        return { className: 'bg-gradient-to-br from-emerald-50 via-teal-50 to-slate-100', style: {} };
       case 'red':
-        return { background: 'linear-gradient(to bottom right, #991b1b, #b91c1c, #9a3412)' }; // Richer Red
+        return { className: 'bg-gradient-to-br from-orange-50 via-rose-50 to-slate-100', style: {} };
       case 'black':
-        return { background: 'linear-gradient(to bottom right, #18181b, #27272a, #3f3f46)' }; // Elegant Black
+        return { className: 'bg-slate-900', style: {} };
       case 'blue':
-        return { background: 'linear-gradient(to bottom right, #1e3a8a, #1d4ed8, #2563eb)' }; // Zen Blue
+        return { className: 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50', style: {} };
       case 'rich':
         return {
-          backgroundImage: `url('/bg_rich.jpg')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'top center',
-          backgroundRepeat: 'no-repeat'
+          className: 'bg-slate-800',
+          style: {
+            backgroundImage: `url('/bg_rich.jpg')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'top center',
+            backgroundRepeat: 'no-repeat'
+          }
         };
       case 'default':
       default:
-        return { backgroundColor: '#f9fafb' };
+        return { className: 'bg-slate-50', style: {} };
     }
   };
+
+  const themeConfig = getThemeConfig();
 
   const handleClearData = async () => {
     if (!user) return;
@@ -418,8 +427,8 @@ const App: React.FC = () => {
 
   return (
     <div
-      className="h-full flex flex-col max-w-md mx-auto shadow-2xl overflow-hidden relative transition-all duration-500 ease-in-out pt-[env(safe-area-inset-top)]"
-      style={getBackgroundStyle()}
+      className={`h-full flex flex-col max-w-md mx-auto shadow-2xl overflow-hidden relative transition-all duration-500 ease-in-out pt-[env(safe-area-inset-top)] ${themeConfig.className}`}
+      style={themeConfig.style}
     >
       <div className="flex-1 overflow-hidden relative">
         {isInitializing ? (

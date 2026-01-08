@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body {
+    @apply antialiased text-slate-900 bg-slate-50;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
 @layer utilities {
   :root {
     --keyboard-height: 0px;
