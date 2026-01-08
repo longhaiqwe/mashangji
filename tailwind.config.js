@@ -51,10 +51,10 @@ export default {
                     800: '#065f46',
                     900: '#064e3b',
                 },
-                expense: '#f43f5e', // New rose-500
-                income: '#10b981',  // New emerald-500
-                win: '#10b981',     // Re-mapped to green
-                loss: '#f43f5e',    // Re-mapped to red
+                expense: '#10b981', // New emerald-500 (Loss/Expense)
+                income: '#f43f5e',  // New rose-500 (Win/Income)
+                win: '#f43f5e',     // Re-mapped to red (Win)
+                loss: '#10b981',    // Re-mapped to green (Loss)
             }
         }
     },

@@ -122,7 +122,9 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
       .map(([name, amount]) => ({ name, amount }))
       .filter(item => item.amount !== 0);
 
-    return { totalPnL, totalWins, totalLosses, totalGames, chartData };
+    const maxAbs = Math.max(...chartData.map(d => Math.abs(d.amount)), 100); // Default 100 to avoid 0 domain if empty (though checked later)
+
+    return { totalPnL, totalWins, totalLosses, totalGames, chartData, maxAbs };
   }, [records, circles, timeRange, currentDate]);
 
   // Trend Data Calculation for Line Charts
@@ -387,8 +389,8 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
   const isDarkTheme = themeId === 'black' || themeId === 'rich';
 
   // Constants for Chart Colors (using new Design System)
-  const COLOR_WIN = '#10b981'; // Emerald 500
-  const COLOR_LOSS = '#f43f5e'; // Rose 500
+  const COLOR_WIN = '#f43f5e'; // Rose 500 (Win)
+  const COLOR_LOSS = '#10b981'; // Emerald 500 (Loss)
   const COLOR_AXIS = '#cbd5e1'; // Slate 300
   const COLOR_TEXT = '#64748b'; // Slate 500
 
@@ -457,10 +459,10 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isDarkTheme ? 'bg-white/10 text-white/70' : 'bg-white/60 text-indigo-400'
                   }`}>本周运势</span>
               </div>
-              <h3 className={`text-2xl font-black mb-1.5 ${fortune.type === 'good' ? 'text-primary-600' :
-                  fortune.type === 'bad' ? 'text-rose-500' :
-                    fortune.type === 'warning' ? 'text-orange-500' :
-                      'text-slate-700'
+              <h3 className={`text-2xl font-black mb-1.5 ${fortune.type === 'good' ? 'text-rose-500' :
+                fortune.type === 'bad' ? 'text-emerald-500' :
+                  fortune.type === 'warning' ? 'text-orange-500' :
+                    'text-slate-700'
                 }`}>
                 {fortune.title}
               </h3>
@@ -473,12 +475,12 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
 
         {/* Overview Stats Cards */}
         <div className="grid grid-cols-2 gap-4">
-          <div className={`rounded-3xl p-5 col-span-2 shadow-lg transition-all ${isDarkTheme ? 'bg-slate-800' : 'bg-slate-900 text-white shadow-slate-200'
+          <div className={`rounded-3xl p-5 col-span-2 shadow-sm border transition-all ${isDarkTheme ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'
             }`}>
-            <div className={`text-sm font-medium mb-1 opacity-80`}>
+            <div className={`text-sm font-bold uppercase tracking-wider mb-1 ${isDarkTheme ? 'text-slate-400' : 'text-slate-400'}`}>
               {timeRange === 'all' ? '总亏盈 (Total)' : '期间盈亏 (Net)'}
             </div>
-            <div className={`text-4xl font-bold font-mono tracking-tight`}>
+            <div className={`text-5xl font-black font-mono tracking-tight my-2 ${stats.totalPnL >= 0 ? 'text-win' : 'text-loss'}`}>
               {stats.totalPnL > 0 ? '+' : ''}{stats.totalPnL}
             </div>
           </div>
@@ -534,7 +536,7 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
                         return (
                           <div className="bg-white p-3 rounded-xl shadow-xl border border-slate-100 text-xs text-slate-600">
                             <div className="font-bold text-slate-800 mb-1">{payload[0].payload.label}</div>
-                            <div className={`font-mono text-sm font-bold ${val >= 0 ? 'text-primary-600' : 'text-rose-500'}`}>
+                            <div className={`font-mono text-sm font-bold ${val >= 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
                               {val > 0 ? '+' : ''}{val}
                             </div>
                           </div>
@@ -566,7 +568,7 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats.chartData} layout="vertical" margin={{ top: 0, right: 30, left: 30, bottom: 0 }}>
-                  <XAxis type="number" hide />
+                  <XAxis type="number" hide domain={[-stats.maxAbs, stats.maxAbs]} />
                   <YAxis
                     dataKey="name"
                     type="category"
@@ -583,7 +585,7 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
                         return (
                           <div className="bg-white p-3 rounded-xl shadow-xl border border-slate-100 text-xs text-slate-600">
                             <div className="font-bold text-slate-800 mb-1">{payload[0].payload.name}</div>
-                            <div className={`font-mono text-sm font-bold ${val >= 0 ? 'text-primary-600' : 'text-rose-500'}`}>
+                            <div className={`font-mono text-sm font-bold ${val >= 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
                               {val > 0 ? '+' : ''}{val}
                             </div>
                           </div>
@@ -621,12 +623,12 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
                 <div className="grid grid-cols-2 gap-3">
                   <div className={`p-3 rounded-2xl ${isDarkTheme ? 'bg-white/5' : 'bg-slate-50'}`}>
                     <div className="text-xs text-slate-500 mb-1">最大单笔盈利</div>
-                    <div className="text-primary-600 font-bold font-mono text-lg">{insights.maxWinAmount > 0 ? '+' + insights.maxWinAmount : '-'}</div>
+                    <div className="text-rose-600 font-bold font-mono text-lg">{insights.maxWinAmount > 0 ? '+' + insights.maxWinAmount : '-'}</div>
                     <div className="text-[10px] text-slate-400">{insights.maxWinDate}</div>
                   </div>
                   <div className={`p-3 rounded-2xl ${isDarkTheme ? 'bg-white/5' : 'bg-slate-50'}`}>
                     <div className="text-xs text-slate-500 mb-1">最大单笔亏损</div>
-                    <div className="text-rose-500 font-bold font-mono text-lg">{insights.maxLossAmount < 0 ? insights.maxLossAmount : '-'}</div>
+                    <div className="text-emerald-500 font-bold font-mono text-lg">{insights.maxLossAmount < 0 ? insights.maxLossAmount : '-'}</div>
                     <div className="text-[10px] text-slate-400">{insights.maxLossDate}</div>
                   </div>
                 </div>
@@ -634,7 +636,7 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
                 <div className="space-y-2">
                   {insights.monthlyRecap.map((t, i) => (
                     <div key={i} className={`text-xs px-3 py-2 rounded-lg flex items-start ${isDarkTheme ? 'bg-white/5 text-slate-300' : 'bg-slate-50 text-slate-600'}`}>
-                      <span className="mr-2 mt-0.5 text-primary-500 font-bold">•</span>
+                      <span className="mr-2 mt-0.5 text-rose-500 font-bold">•</span>
                       {t}
                     </div>
                   ))}

@@ -148,7 +148,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                 {
                   label: '删除',
                   icon: <Trash2 size={18} />,
-                  color: 'bg-rose-500', // Updated to rose
+                  color: 'bg-rose-500', // Keep Delete as Red (Danger)
                   onClick: () => onDeleteRecord(record.id)
                 }
               ]}
@@ -161,10 +161,10 @@ const Dashboard: React.FC<DashboardProps> = ({
               >
                 <div className="flex justify-between items-center">
                   <div className="flex items-center space-x-3.5">
-                    {/* Status Dot / Icon */}
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${record.amount >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'
+                    {/* Status Dot / Icon swap: Win(>0)=Red(Rose), Loss(<0)=Green(Emerald) */}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${record.amount >= 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
                       }`}>
-                      <div className={`w-2.5 h-2.5 rounded-full ${record.amount >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                      <div className={`w-2.5 h-2.5 rounded-full ${record.amount >= 0 ? 'bg-rose-500' : 'bg-emerald-500'}`}></div>
                     </div>
 
                     <div>
