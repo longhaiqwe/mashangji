@@ -141,8 +141,7 @@ const CircleManager: React.FC<CircleManagerProps> = ({ circles, onUpdateCircles,
                       </div>
                     </div>
 
-                    {/* Optional: Add a chevron or hint to indicate slideable? Or keep plain */}
-                    <ChevronLeft className="w-4 h-4 text-gray-300 transform rotate-180" />
+
                   </div>
                 </SwipeableItem>
               )}
