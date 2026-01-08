@@ -3,29 +3,81 @@ import { Record, Circle, UserPreferences } from '../types';
 import { DEFAULT_CIRCLES, DEFAULT_PREFERENCES } from '../constants';
 import { supabase } from './supabase';
 
+/**
+ * Helper to execute DB operations with auto-retry and session refresh
+ */
+async function withRetry<T>(operation: () => Promise<T>, retries = 1): Promise<T> {
+  try {
+    return await operation();
+  } catch (err: any) {
+    if (retries > 0) {
+      // Check for likely Auth/Network errors
+      // 401: Unauthorized (JWT expired/invalid)
+      // 403: Forbidden (RLS policy, but sometimes requires refresh)
+      // "JWT expired" message
+      // Network errors (TypeError: Failed to fetch)
+      const message = err?.message || '';
+      const isAuthError =
+        err?.status === 401 ||
+        err?.status === 403 ||
+        message.includes('JWT') ||
+        message.includes('jwt');
+      const isNetworkError =
+        message.includes('fetch') ||
+        message.includes('network') ||
+        message.includes('connection');
+
+      if (isAuthError) {
+        console.warn('[Storage] Auth error detected, attempting session refresh...', err);
+        const { data, error } = await supabase.auth.refreshSession();
+        if (error) {
+           console.error('[Storage] Session refresh failed:', error);
+           // Don't return here, let the next retry (or final throw) handle it, 
+           // but effectively we can't fix it if refresh fails.
+        } else if (data.session) {
+           console.log('[Storage] Session refreshed successfully.');
+        }
+      } else if (isNetworkError) {
+         console.warn('[Storage] Network error, retrying in 1s...', err);
+         await new Promise(r => setTimeout(r, 1000));
+      } else {
+         // Unknown error, maybe just retry once?
+         console.warn('[Storage] Operation failed, retrying...', err);
+      }
+      
+      return withRetry(operation, retries - 1);
+    }
+    throw err;
+  }
+}
+
+
 // --- Records ---
 
 export const fetchRecords = async (userId: string): Promise<Record[]> => {
-  const { data, error } = await supabase
-    .from('records')
-    .select('*')
-    .eq('user_id', userId)
-    .order('timestamp', { ascending: false });
+  return withRetry(async () => {
+    const { data, error } = await supabase
+      .from('records')
+      .select('*')
+      .eq('user_id', userId)
+      .order('timestamp', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching records:', error);
+    if (error) throw error;
+    return data;
+  }).catch(err => {
+    console.error('Error fetching records:', err);
     return [];
-  }
-
-  // Map snake_case DB columns to camelCase TS interface
-  return data.map((item: any) => ({
-    id: item.id,
-    circleId: item.circle_id,
-    amount: Number(item.amount),
-    date: item.date,
-    note: item.note,
-    timestamp: Number(item.timestamp),
-  }));
+  }).then(data => {
+    // Map snake_case DB columns to camelCase TS interface
+    return data.map((item: any) => ({
+      id: item.id,
+      circleId: item.circle_id,
+      amount: Number(item.amount),
+      date: item.date,
+      note: item.note,
+      timestamp: Number(item.timestamp),
+    }));
+  });
 };
 
 export const addRecord = async (record: Record, userId: string): Promise<Record | null> => {
@@ -39,12 +91,14 @@ export const addRecord = async (record: Record, userId: string): Promise<Record 
     timestamp: record.timestamp,
   };
 
-  const { error } = await supabase.from('records').insert(dbRecord);
-
-  if (error) {
+  return withRetry(async () => {
+    const { error } = await supabase.from('records').insert(dbRecord);
+    if (error) throw error;
+    return record;
+  }).catch(error => {
     console.error('Error adding record:', error);
     throw error;
-  }
+  });
   return record;
 };
 
@@ -61,15 +115,16 @@ export const addRecordsBatch = async (records: Record[], userId: string): Promis
     timestamp: record.timestamp,
   }));
 
-  const { error } = await supabase.from('records').upsert(dbRecords, {
-    onConflict: 'id',
-    ignoreDuplicates: true
-  });
-
-  if (error) {
+  await withRetry(async () => {
+    const { error } = await supabase.from('records').upsert(dbRecords, {
+      onConflict: 'id',
+      ignoreDuplicates: true
+    });
+    if (error) throw error;
+  }).catch(error => {
     console.error('Error adding batch records:', error);
     throw error;
-  }
+  });
 };
 
 export const updateRecord = async (record: Record, userId: string): Promise<void> => {
@@ -80,96 +135,107 @@ export const updateRecord = async (record: Record, userId: string): Promise<void
     note: record.note,
   };
 
-  const { error } = await supabase
-    .from('records')
-    .update(dbRecord)
-    .eq('id', record.id)
-    .eq('user_id', userId);
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('records')
+      .update(dbRecord)
+      .eq('id', record.id)
+      .eq('user_id', userId);
 
-  if (error) {
+    if (error) throw error;
+  }).catch(error => {
     console.error('Error updating record:', error);
     throw error;
-  }
+  });
 };
 
 export const deleteRecord = async (recordId: string, userId: string): Promise<void> => {
-  const { error } = await supabase
-    .from('records')
-    .delete()
-    .eq('id', recordId)
-    .eq('user_id', userId); // Extra safety
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('records')
+      .delete()
+      .eq('id', recordId)
+      .eq('user_id', userId); // Extra safety
 
-  if (error) {
+    if (error) throw error;
+  }).catch(error => {
     console.error('Error deleting record:', error);
     throw error;
-  }
+  });
 };
 
 export const deleteAllRecords = async (userId: string): Promise<void> => {
-  const { error } = await supabase
-    .from('records')
-    .delete()
-    .eq('user_id', userId);
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('records')
+      .delete()
+      .eq('user_id', userId);
 
-  if (error) {
+    if (error) throw error;
+  }).catch(error => {
     console.error('Error deleting all records:', error);
     throw error;
-  }
+  });
 };
 
 export const deleteAllCircles = async (userId: string): Promise<void> => {
-  const { error } = await supabase
-    .from('circles')
-    .delete()
-    .eq('user_id', userId);
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('circles')
+      .delete()
+      .eq('user_id', userId);
 
-  if (error) {
+    if (error) throw error;
+  }).catch(error => {
     console.error('Error deleting all circles:', error);
     throw error;
-  }
+  });
 };
 
 export const deleteAllPreferences = async (userId: string): Promise<void> => {
-  const { error } = await supabase
-    .from('user_preferences')
-    .delete()
-    .eq('user_id', userId);
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('user_preferences')
+      .delete()
+      .eq('user_id', userId);
 
-  if (error) {
+    if (error) throw error;
+  }).catch(error => {
     console.error('Error deleting preferences:', error);
     throw error;
-  }
+  });
 };
 
 // --- Circles ---
 
 export const fetchCircles = async (userId: string): Promise<Circle[]> => {
-  const { data, error } = await supabase
-    .from('circles')
-    .select('*')
-    .eq('user_id', userId);
+  return withRetry(async () => {
+    const { data, error } = await supabase
+      .from('circles')
+      .select('*')
+      .eq('user_id', userId);
 
-  if (error) {
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      // Initializing default circles for new user in DB
+      const newDefaultCircles = DEFAULT_CIRCLES.map(c => ({
+        ...c,
+        id: generateId()
+      }));
+      await syncCircles(newDefaultCircles, userId);
+      return newDefaultCircles;
+    }
+
+    return data.map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      isDefault: item.is_default,
+    }));
+  }).catch(error => {
     console.error('Error fetching circles:', error);
     return DEFAULT_CIRCLES;
-  }
-
-  if (!data || data.length === 0) {
-    // Initializing default circles for new user in DB
-    // Assign unique IDs to prevent collision
-    const newDefaultCircles = DEFAULT_CIRCLES.map(c => ({
-      ...c,
-      id: generateId()
-    }));
-    await syncCircles(newDefaultCircles, userId);
-    return newDefaultCircles;
-  }
-
-  return data.map((item: any) => ({
-    id: item.id,
-    name: item.name,
-    isDefault: item.is_default,
-  }));
+  });
 };
 
 // Sync circles: Upsert current list and delete removed ones
@@ -182,56 +248,53 @@ export const syncCircles = async (circles: Circle[], userId: string): Promise<vo
     is_default: c.isDefault || false
   }));
 
-  const { error: upsertError } = await supabase
-    .from('circles')
-    .upsert(dbCircles);
+  await withRetry(async () => {
+    const { error: upsertError } = await supabase
+      .from('circles')
+      .upsert(dbCircles);
 
-  if (upsertError) throw upsertError;
+    if (upsertError) throw upsertError;
 
-  // 2. Delete circles not in the new list
-  const currentIds = circles.map(c => c.id);
+    // 2. Delete circles not in the new list
+    const currentIds = circles.map(c => c.id);
 
-  const query = supabase
-    .from('circles')
-    .delete()
-    .eq('user_id', userId);
+    const query = supabase
+      .from('circles')
+      .delete()
+      .eq('user_id', userId);
 
-  // If we have current circles, we only delete the ones NOT in this list
-  if (currentIds.length > 0) {
-    // PostgREST expects: (val1,val2,val3)
-    const filterValue = `(${currentIds.map(id => `"${id}"`).join(',')})`;
-    query.filter('id', 'not.in', filterValue);
-  }
-  // If currentIds is empty, we don't apply filter, effectively deleting all circles for this user (which is correct behavior)
+    if (currentIds.length > 0) {
+      const filterValue = `(${currentIds.map(id => `"${id}"`).join(',')})`;
+      query.filter('id', 'not.in', filterValue);
+    }
 
-  const { error: deleteError } = await query;
-
-  if (deleteError) throw deleteError;
+    const { error: deleteError } = await query;
+    if (deleteError) throw deleteError;
+  });
 };
 
 // --- Preferences ---
 
 export const fetchPreferences = async (userId: string): Promise<UserPreferences> => {
-  const { data, error } = await supabase
-    .from('user_preferences')
-    .select('*')
-    .eq('user_id', userId)
-    .maybeSingle();
+  return withRetry(async () => {
+    const { data, error } = await supabase
+      .from('user_preferences')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
 
-  if (error) {
+    if (error) throw error;
+    
+    if (!data) return DEFAULT_PREFERENCES;
+
+    return {
+      themeId: data.theme_id as any,
+      backgroundImage: data.background_image,
+    };
+  }).catch(error => {
     console.error('Error fetching preferences:', error.message);
     return DEFAULT_PREFERENCES;
-  }
-
-  if (!data) {
-    // No preferences found, return defaults
-    return DEFAULT_PREFERENCES;
-  }
-
-  return {
-    themeId: data.theme_id as any,
-    backgroundImage: data.background_image,
-  };
+  });
 };
 
 export const savePreferences = async (prefs: UserPreferences, userId: string): Promise<void> => {
@@ -241,13 +304,14 @@ export const savePreferences = async (prefs: UserPreferences, userId: string): P
     background_image: prefs.backgroundImage,
   };
 
-  const { error } = await supabase
-    .from('user_preferences')
-    .upsert(dbPrefs);
-
-  if (error) {
+  await withRetry(async () => {
+    const { error } = await supabase
+      .from('user_preferences')
+      .upsert(dbPrefs);
+    if (error) throw error;
+  }).catch(error => {
     console.error('Error saving preferences:', error);
-  }
+  });
 };
 
 export const generateId = (): string => {

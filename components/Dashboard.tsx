@@ -1,7 +1,9 @@
 
 import React, { useMemo, useState } from 'react';
+
 import { Record, Circle, ViewState } from '../types';
 import { Trash2, Edit2, Wallet } from 'lucide-react';
+import SwipeableItem from './SwipeableItem';
 
 interface DashboardProps {
   records: Record[];
@@ -140,47 +142,52 @@ const Dashboard: React.FC<DashboardProps> = ({
           </div>
         ) : (
           filteredRecords.map((record) => (
-            <div
+            <SwipeableItem
               key={record.id}
-              className={`group backdrop-blur-md rounded-xl p-4 shadow-sm relative overflow-hidden transition-all active:scale-[0.99] ${isCustomTheme
-                ? 'bg-black/30 border border-white/10 hover:bg-black/40'
-                : 'bg-white/90 border border-gray-100 hover:bg-white'
-                }`}
+              className="mb-3 rounded-xl shadow-sm overflow-hidden" // Add margin/shadow here since SwipeableItem wraps content
+              actions={[
+                {
+                  label: '编辑',
+                  icon: <Edit2 size={20} />,
+                  color: 'bg-indigo-500',
+                  onClick: () => onEditRecord(record)
+                },
+                {
+                  label: '删除',
+                  icon: <Trash2 size={20} />,
+                  color: 'bg-red-500',
+                  onClick: () => onDeleteRecord(record.id)
+                }
+              ]}
             >
-              <div className="flex justify-between items-start">
-                <div className="flex items-start space-x-3">
-                  <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${record.amount >= 0 ? 'bg-win' : 'bg-loss'}`}></div>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`font-bold ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>{getCircleName(record.circleId)}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded ${isCustomTheme ? 'text-white/60 bg-white/10' : 'text-gray-400 bg-gray-100'}`}>{record.date}</span>
+              <div
+                className={`p-4 transition-all active:scale-[0.99] group ${isCustomTheme
+                  ? 'bg-black/30 border border-white/10 hover:bg-black/40' // Remove rounded here, parent handles it
+                  : 'bg-white/90 border border-gray-100 hover:bg-white'
+                  }`}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex items-start space-x-3">
+                    <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${record.amount >= 0 ? 'bg-win' : 'bg-loss'}`}></div>
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <span className={`font-bold ${isCustomTheme ? 'text-white' : 'text-gray-800'}`}>{getCircleName(record.circleId)}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${isCustomTheme ? 'text-white/60 bg-white/10' : 'text-gray-400 bg-gray-100'}`}>{record.date}</span>
+                      </div>
+                      {record.note && (
+                        <p className={`text-xs mt-1 line-clamp-1 ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>{record.note}</p>
+                      )}
                     </div>
-                    {record.note && (
-                      <p className={`text-xs mt-1 line-clamp-1 ${isCustomTheme ? 'text-white/60' : 'text-gray-500'}`}>{record.note}</p>
-                    )}
+                  </div>
+                  <div className={`font-mono font-bold text-lg ${record.amount >= 0 ? 'text-win' : 'text-loss'}`}>
+                    {formatMoney(record.amount)}
                   </div>
                 </div>
-                <div className={`font-mono font-bold text-lg ${record.amount >= 0 ? 'text-win' : 'text-loss'}`}>
-                  {formatMoney(record.amount)}
-                </div>
-              </div>
 
-              {/* Actions */}
-              <div className="mt-3 pt-3 border-t border-white/10 flex justify-end space-x-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={() => onEditRecord(record)}
-                  className="text-gray-400 hover:text-mahjong-600 flex items-center text-xs"
-                >
-                  <Edit2 className="w-3 h-3 mr-1" /> 编辑
-                </button>
-                <button
-                  onClick={() => onDeleteRecord(record.id)}
-                  className="text-gray-400 hover:text-red-500 flex items-center text-xs"
-                >
-                  <Trash2 className="w-3 h-3 mr-1" /> 删除
-                </button>
+                {/* Mobile Hint (Optional: subtle arrow or indicator that it's swipeable? 
+                    For now, clean look is better, standard iOS behavior) */}
               </div>
-            </div>
+            </SwipeableItem>
           ))
         )}
 

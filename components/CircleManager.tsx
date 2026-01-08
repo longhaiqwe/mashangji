@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Circle, ViewState } from '../types';
 import { Trash2, Plus, Edit2, ChevronLeft, Users } from 'lucide-react';
 import { generateId } from '../services/storageService';
+import SwipeableItem from './SwipeableItem';
 
 interface CircleManagerProps {
   circles: Circle[];
@@ -55,20 +56,20 @@ const CircleManager: React.FC<CircleManagerProps> = ({ circles, onUpdateCircles,
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm px-4 h-14 flex items-center justify-between border-b border-gray-200 shadow-sm sticky top-0 z-10">
         <div className="flex items-center">
-            {onBack && (
-                <button onClick={onBack} className="p-2 -ml-2 mr-2 text-gray-600">
-                    <ChevronLeft className="w-6 h-6" />
-                </button>
-            )}
-            <h2 className="text-lg font-bold text-gray-800">圈子管理</h2>
+          {onBack && (
+            <button onClick={onBack} className="p-2 -ml-2 mr-2 text-gray-600">
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          )}
+          <h2 className="text-lg font-bold text-gray-800">圈子管理</h2>
         </div>
         {!isAdding && !editingId && (
-            <button 
-                onClick={() => setIsAdding(true)}
-                className="text-mahjong-600 p-2 hover:bg-mahjong-50 rounded-full"
-            >
-                <Plus className="w-6 h-6" />
-            </button>
+          <button
+            onClick={() => setIsAdding(true)}
+            className="text-mahjong-600 p-2 hover:bg-mahjong-50 rounded-full"
+          >
+            <Plus className="w-6 h-6" />
+          </button>
         )}
       </div>
 
@@ -95,47 +96,55 @@ const CircleManager: React.FC<CircleManagerProps> = ({ circles, onUpdateCircles,
         {/* List */}
         <div className="space-y-3">
           {circles.map(circle => (
-            <div key={circle.id} className="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between group">
+            <div key={circle.id} className="mb-3">
+              {/* Wrapper for list logic - Edit Mode vs Swipe Mode */}
               {editingId === circle.id ? (
-                <div className="flex gap-2 w-full">
-                  <input
-                    type="text"
-                    value={tempName}
-                    onChange={(e) => setTempName(e.target.value)}
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    autoFocus
-                  />
-                  <button onClick={handleSaveEdit} className="bg-mahjong-600 text-white px-3 py-2 rounded-lg text-xs">保存</button>
-                  <button onClick={() => setEditingId(null)} className="bg-gray-200 text-gray-600 px-3 py-2 rounded-lg text-xs">取消</button>
+                <div className="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
+                  <div className="flex gap-2 w-full">
+                    <input
+                      type="text"
+                      value={tempName}
+                      onChange={(e) => setTempName(e.target.value)}
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      autoFocus
+                    />
+                    <button onClick={handleSaveEdit} className="bg-mahjong-600 text-white px-3 py-2 rounded-lg text-xs">保存</button>
+                    <button onClick={() => setEditingId(null)} className="bg-gray-200 text-gray-600 px-3 py-2 rounded-lg text-xs">取消</button>
+                  </div>
                 </div>
               ) : (
-                <>
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 rounded-full bg-mahjong-100 flex items-center justify-center text-mahjong-700 mr-3">
+                <SwipeableItem
+                  className="bg-white rounded-xl shadow-sm"
+                  actions={[
+                    {
+                      label: '编辑',
+                      icon: <Edit2 size={18} />,
+                      color: 'bg-indigo-500',
+                      onClick: () => handleEdit(circle.id, circle.name)
+                    },
+                    ...(!circle.isDefault ? [{
+                      label: '删除',
+                      icon: <Trash2 size={18} />,
+                      color: 'bg-red-500',
+                      onClick: () => handleDelete(circle.id)
+                    }] : [])
+                  ]}
+                >
+                  <div className="flex items-center justify-between p-4">
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 rounded-full bg-mahjong-100 flex items-center justify-center text-mahjong-700 mr-3">
                         <Users className="w-5 h-5" />
-                    </div>
-                    <div>
+                      </div>
+                      <div>
                         <span className="font-bold text-gray-800 block">{circle.name}</span>
                         {circle.isDefault && <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 rounded">默认</span>}
+                      </div>
                     </div>
+
+                    {/* Optional: Add a chevron or hint to indicate slideable? Or keep plain */}
+                    <ChevronLeft className="w-4 h-4 text-gray-300 transform rotate-180" />
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <button 
-                        onClick={() => handleEdit(circle.id, circle.name)}
-                        className="p-2 text-gray-400 hover:text-mahjong-600"
-                    >
-                        <Edit2 className="w-4 h-4" />
-                    </button>
-                    {!circle.isDefault && (
-                        <button 
-                            onClick={() => handleDelete(circle.id)}
-                            className="p-2 text-gray-400 hover:text-red-500"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    )}
-                  </div>
-                </>
+                </SwipeableItem>
               )}
             </div>
           ))}
