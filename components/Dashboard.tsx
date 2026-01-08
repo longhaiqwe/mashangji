@@ -155,7 +155,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             >
               <div
                 className={`p-4 transition-all active:scale-[0.98] ${isDarkTheme
-                  ? 'bg-slate-800/90 border border-slate-700/50'
+                  ? 'bg-slate-800 border border-slate-700/50'
                   : 'bg-white border border-slate-100' // Clean white card
                   }`}
               >

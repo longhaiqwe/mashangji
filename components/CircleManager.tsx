@@ -468,7 +468,7 @@ const CircleItem = ({
         ]}
       >
         <div
-          className="flex items-center justify-between p-4 active:bg-gray-50 transition-colors"
+          className="flex items-center justify-between p-4 active:bg-gray-50 transition-colors bg-white"
           onTouchStart={startPress}
           onTouchEnd={endPress}
           onTouchMove={endPress}
