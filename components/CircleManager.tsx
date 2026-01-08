@@ -4,7 +4,25 @@ import { Circle, ViewState } from '../types';
 import { Trash2, Plus, Edit2, ChevronLeft, Users, Menu, CheckCircle2 } from 'lucide-react';
 import { generateId } from '../services/storageService';
 import SwipeableItem from './SwipeableItem';
-import { Reorder, useDragControls } from 'framer-motion';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  TouchSensor,
+  MouseSensor
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface CircleManagerProps {
   circles: Circle[];
@@ -18,8 +36,34 @@ const CircleManager: React.FC<CircleManagerProps> = ({ circles, onUpdateCircles,
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempName, setTempName] = useState('');
-  // Updated state to hold menu position
-  const [menuState, setMenuState] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [menuState, setMenuState] = useState<{ id: string; x: number; y: number; source: 'touch' | 'mouse' } | null>(null);
+
+  // Local state for drag and drop to avoid premature DB syncs
+  // We sync with props.circles whenever props.circles changes (external update),
+  // but during drag we only update this local state, and sync back on dragEnd.
+  // Actually, for dnd-kit in React, we usually update state immediately on drop.
+  // We can just use the parent's onUpdateCircles directly if we only call it on drag end.
+  // However, `circles` prop comes from parent state.
+  // The plan is: drag moves items visually (dnd-kit handles this via transform usually, OR we update local list).
+  // dnd-kit's official examples usually update the list on dragEnd.
+  // So we don't need intermediate local state if we only update on drop.
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 5, // 5px movement to start drag
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 100, // short delay to distinguish from tap
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleAdd = () => {
     if (!tempName.trim()) return;
@@ -59,49 +103,54 @@ const CircleManager: React.FC<CircleManagerProps> = ({ circles, onUpdateCircles,
   const handleSetDefault = (id: string) => {
     const targetCircle = circles.find(c => c.id === id);
     if (!targetCircle) return;
-
-    // Remove target from list
     const otherCircles = circles.filter(c => c.id !== id);
-
-    // Create updated target with isDefault true
     const updatedTarget = { ...targetCircle, isDefault: true };
-
-    // Set all others to isDefault false
     const updatedOthers = otherCircles.map(c => ({ ...c, isDefault: false }));
-
-    // Reassemble: Target at top, others follow
     const newOrder = [updatedTarget, ...updatedOthers];
-
-    // Update sortOrder for all
     const finalists = newOrder.map((c, i) => ({ ...c, sortOrder: i }));
-
     onUpdateCircles(finalists);
-    setMenuState(null); // Close menu
+    setMenuState(null);
   };
 
   /* Separated Sort Logic */
   const defaultCircle = circles.find(c => c.isDefault);
-  const otherCircles = circles.filter(c => !c.isDefault);
+  // Ensure we sort otherCircles by sortOrder before rendering to keep consistency
+  const otherCircles = circles
+    .filter(c => !c.isDefault)
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
-  const handleReorderOthers = (newOrderOthers: Circle[]) => {
-    // Reconstruct full list: default first, then reordered others
-    let newAllCircles: Circle[] = [];
-    if (defaultCircle) {
-      newAllCircles = [defaultCircle, ...newOrderOthers];
-    } else {
-      newAllCircles = newOrderOthers;
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      const oldIndex = otherCircles.findIndex((c) => c.id === active.id);
+      const newIndex = otherCircles.findIndex((c) => c.id === over?.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        // Calculate the new order for 'otherCircles'
+        const newOtherCircles = arrayMove<Circle>(otherCircles, oldIndex, newIndex);
+
+        // Reconstruct full list: default first (if exists), then others
+        let newAllCircles: Circle[] = [];
+        if (defaultCircle) {
+          newAllCircles = [defaultCircle, ...newOtherCircles];
+        } else {
+          newAllCircles = newOtherCircles;
+        }
+
+        // Update sortOrder for all to persist the new order
+        const updated = newAllCircles.map((c, i) => ({
+          ...c,
+          sortOrder: i
+        }));
+
+        onUpdateCircles(updated);
+      }
     }
-
-    // Update sortOrder based on new index
-    const updated = newAllCircles.map((c, i) => ({
-      ...c,
-      sortOrder: i
-    }));
-    onUpdateCircles(updated);
   };
 
-  const openMenu = (id: string, x: number, y: number) => {
-    setMenuState({ id, x, y });
+  const openMenu = (id: string, x: number, y: number, source: 'touch' | 'mouse') => {
+    setMenuState({ id, x, y, source });
   };
 
   return (
@@ -147,29 +196,12 @@ const CircleManager: React.FC<CircleManagerProps> = ({ circles, onUpdateCircles,
         )}
 
         {/* List */}
-        {/* List */}
-        <div className="space-y-3">
+        <div className="">
           {defaultCircle && (
-            <CircleItem
-              key={defaultCircle.id}
-              circle={defaultCircle}
-              editingId={editingId}
-              tempName={tempName}
-              setTempName={setTempName}
-              setEditingId={setEditingId}
-              handleSaveEdit={handleSaveEdit}
-              handleEdit={handleEdit}
-              handleDelete={handleDelete}
-              onOpenMenu={openMenu}
-              isStatic={true}
-            />
-          )}
-
-          <Reorder.Group axis="y" values={otherCircles} onReorder={handleReorderOthers} className="space-y-3">
-            {otherCircles.map((circle) => (
+            <div className="mb-3">
               <CircleItem
-                key={circle.id}
-                circle={circle}
+                key={defaultCircle.id}
+                circle={defaultCircle}
                 editingId={editingId}
                 tempName={tempName}
                 setTempName={setTempName}
@@ -178,54 +210,83 @@ const CircleManager: React.FC<CircleManagerProps> = ({ circles, onUpdateCircles,
                 handleEdit={handleEdit}
                 handleDelete={handleDelete}
                 onOpenMenu={openMenu}
+                isStatic={true}
               />
-            ))}
-          </Reorder.Group>
+            </div>
+          )}
+
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={otherCircles.map(c => c.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="flex flex-col gap-3">
+                {otherCircles.map((circle) => (
+                  <SortableCircleItem
+                    key={circle.id}
+                    circle={circle}
+                    editingId={editingId}
+                    tempName={tempName}
+                    setTempName={setTempName}
+                    setEditingId={setEditingId}
+                    handleSaveEdit={handleSaveEdit}
+                    handleEdit={handleEdit}
+                    handleDelete={handleDelete}
+                    onOpenMenu={openMenu}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
 
       {/* Menu - Responsive Logic */}
       {menuState && (
         <>
-          {/* Mobile Bottom Sheet Backdrop */}
-          <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/20 backdrop-blur-[1px] md:hidden"
-            onClick={() => setMenuState(null)}
-          >
+          {menuState.source === 'touch' ? (
             <div
-              className="bg-white w-full max-w-md rounded-t-2xl p-6 animate-slide-up shadow-2xl"
-              onClick={e => e.stopPropagation()}
+              className="fixed inset-0 z-50 flex items-end justify-center bg-black/20 backdrop-blur-[1px]"
+              onClick={() => setMenuState(null)}
             >
-              <CircleMenuContent
-                circleName={circles.find(c => c.id === menuState.id)?.name}
-                onSetDefault={() => handleSetDefault(menuState.id)}
-                onCancel={() => setMenuState(null)}
-              />
+              <div
+                className="bg-white w-full max-w-md rounded-t-2xl p-6 animate-slide-up shadow-2xl"
+                onClick={e => e.stopPropagation()}
+              >
+                <CircleMenuContent
+                  circleName={circles.find(c => c.id === menuState.id)?.name}
+                  onSetDefault={() => handleSetDefault(menuState.id)}
+                  onCancel={() => setMenuState(null)}
+                />
+              </div>
             </div>
-          </div>
-
-          {/* Desktop Context Menu Backdrop (Transparent) */}
-          <div
-            className="fixed inset-0 z-50 hidden md:block"
-            onClick={() => setMenuState(null)}
-            onContextMenu={(e) => { e.preventDefault(); setMenuState(null); }}
-          >
+          ) : (
             <div
-              className="absolute bg-white rounded-lg shadow-xl border border-gray-100 p-2 min-w-[200px] animate-fade-in"
-              style={{
-                top: Math.min(menuState.y, window.innerHeight - 150),
-                left: Math.min(menuState.x, window.innerWidth - 220)
-              }}
-              onClick={e => e.stopPropagation()}
+              className="fixed inset-0 z-50 block"
+              onClick={() => setMenuState(null)}
+              onContextMenu={(e) => { e.preventDefault(); setMenuState(null); }}
             >
-              <CircleMenuContent
-                circleName={circles.find(c => c.id === menuState.id)?.name}
-                onSetDefault={() => handleSetDefault(menuState.id)}
-                onCancel={() => setMenuState(null)}
-                isDesktop
-              />
+              <div
+                className="absolute bg-white rounded-lg shadow-xl border border-gray-100 p-2 min-w-[200px] animate-fade-in"
+                style={{
+                  top: Math.min(menuState.y, window.innerHeight - 150),
+                  left: Math.min(menuState.x, window.innerWidth - 220)
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <CircleMenuContent
+                  circleName={circles.find(c => c.id === menuState.id)?.name}
+                  onSetDefault={() => handleSetDefault(menuState.id)}
+                  onCancel={() => setMenuState(null)}
+                  isDesktop
+                />
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
     </div>
@@ -256,6 +317,31 @@ const CircleMenuContent = ({ circleName, onSetDefault, onCancel, isDesktop }: an
   </>
 );
 
+// Wrapper Component for Sortable Logic
+const SortableCircleItem = (props: any) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: props.circle.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 1, // Elevate when dragging
+    opacity: isDragging ? 0.5 : 1 // Visual feedback for original item
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="touch-none select-none">
+      {/* Pass drag handle props down to CircleItem */}
+      <CircleItem {...props} dragHandleProps={{ ...attributes, ...listeners }} />
+    </div>
+  );
+};
 
 // Sub-component to manage individual item logic and hooks
 const CircleItem = ({
@@ -268,40 +354,45 @@ const CircleItem = ({
   handleEdit,
   handleDelete,
   onOpenMenu,
-  isStatic // New prop to disable dragging/reordering UI
+  isStatic,
+  dragHandleProps // Received from Sortable parent
 }: any) => {
-  const dragControls = useDragControls();
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const isLongPress = useRef(false);
 
   // Prevent default context menu on right click/long press
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
-    onOpenMenu(circle.id, e.clientX, e.clientY);
+    onOpenMenu(circle.id, e.clientX, e.clientY, 'mouse');
   };
 
   const startPress = (e: React.TouchEvent | React.MouseEvent) => {
-    isLongPress.current = false;
+    // If dragging via handle, don't trigger long press logic
+    // Actually we kept handle logic separate, so this is just for the "Long press to Open Menu" logic if we still want it?
+    // User plan said: "点击右侧“更多”按钮 -> 触发 onOpenMenu", but user also said "目前长按出发置顶，我认为是 OK 的".
+    // So let's KEEP long press logic for menu as it doesn't conflict with handle dragging.
 
-    // Capture coordinates
-    // For touch, use first touch point; for mouse, use clientX/Y
+    isLongPress.current = false;
     let clientX = 0;
     let clientY = 0;
+    let source: 'touch' | 'mouse' = 'mouse';
 
     if ('touches' in e) {
       clientX = e.touches[0].clientX;
       clientY = e.touches[0].clientY;
+      source = 'touch';
     } else {
       clientX = (e as React.MouseEvent).clientX;
       clientY = (e as React.MouseEvent).clientY;
+      source = 'mouse';
     }
 
     longPressTimer.current = setTimeout(() => {
       isLongPress.current = true;
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate(50); // Simple haptic feedback
+        navigator.vibrate(50);
       }
-      onOpenMenu(circle.id, clientX, clientY);
+      onOpenMenu(circle.id, clientX, clientY, source);
     }, 500);
   };
 
@@ -312,11 +403,11 @@ const CircleItem = ({
   };
 
   const Wrapper = ({ children }: any) => (
-    <CircleItemWrapper isStatic={isStatic} circle={circle} dragControls={dragControls}>
+    <div className="relative">
       <div onContextMenu={handleContextMenu}>
         {children}
       </div>
-    </CircleItemWrapper>
+    </div>
   );
 
   if (editingId === circle.id) {
@@ -338,6 +429,24 @@ const CircleItem = ({
       </Wrapper>
     );
   }
+
+  // Wrap dnd-kit listeners to stop propagation
+  const safeHandleProps = React.useMemo(() => {
+    if (!dragHandleProps) return {};
+    const props: any = {};
+    Object.keys(dragHandleProps).forEach((key) => {
+      const value = dragHandleProps[key];
+      if (typeof value === 'function' && key.startsWith('on')) {
+        props[key] = (e: any) => {
+          if (e && e.stopPropagation) e.stopPropagation();
+          value(e);
+        };
+      } else {
+        props[key] = value;
+      }
+    });
+    return props;
+  }, [dragHandleProps]);
 
   return (
     <Wrapper>
@@ -362,8 +471,8 @@ const CircleItem = ({
           className="flex items-center justify-between p-4 active:bg-gray-50 transition-colors"
           onTouchStart={startPress}
           onTouchEnd={endPress}
-          onTouchMove={endPress} // Cancel on move
-          onMouseDown={startPress} // Desktop support
+          onTouchMove={endPress}
+          onMouseDown={startPress}
           onMouseUp={endPress}
           onMouseLeave={endPress}
         >
@@ -389,7 +498,7 @@ const CircleItem = ({
           {!isStatic && (
             <div
               className="p-3 -mr-3 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing touch-none"
-              onPointerDown={(e) => dragControls.start(e)}
+              {...safeHandleProps}
             >
               <Menu className="w-5 h-5" />
             </div>
@@ -397,24 +506,6 @@ const CircleItem = ({
         </div>
       </SwipeableItem>
     </Wrapper>
-  );
-};
-
-// Wrapper Component to handle Conditional Reorder.Item vs div
-const CircleItemWrapper = ({ isStatic, children, circle, dragControls }: any) => {
-  if (isStatic) {
-    return <div className="mb-3 relative touch-none">{children}</div>;
-  }
-  return (
-    <Reorder.Item
-      value={circle}
-      dragListener={false}
-      dragControls={dragControls}
-      className="mb-3 relative touch-none"
-      onContextMenu={(e) => e.preventDefault()}
-    >
-      {children}
-    </Reorder.Item>
   );
 };
 
