@@ -11,11 +11,11 @@ interface ThemeSettingsProps {
 const ThemeSettings: React.FC<ThemeSettingsProps> = ({ preferences, onUpdatePreferences, onNavigate }) => {
 
   const themes = [
-    { id: 'default', name: '简约灰 (默认)', color: 'bg-gray-50', preview: 'bg-gray-50' },
-    { id: 'green', name: '麻将绿', color: 'bg-mahjong-800', preview: 'bg-gradient-to-br from-[#166534] to-[#14532d]' },
-    { id: 'red', name: '喜庆红', color: 'bg-red-700', preview: 'bg-gradient-to-br from-[#991b1b] to-[#9a3412]' },
-    { id: 'black', name: '至尊黑', color: 'bg-zinc-900', preview: 'bg-gradient-to-br from-zinc-800 to-zinc-950' },
-    { id: 'blue', name: '禅意蓝', color: 'bg-blue-900', preview: 'bg-gradient-to-br from-blue-800 to-blue-950' },
+    { id: 'default', name: '简约灰 (默认)', color: 'bg-gray-50', preview: 'bg-slate-50' },
+    { id: 'green', name: '麻将绿', color: 'bg-mahjong-800', preview: 'bg-gradient-to-br from-emerald-50 via-teal-50 to-slate-100' },
+    { id: 'red', name: '喜庆红', color: 'bg-red-700', preview: 'bg-gradient-to-br from-orange-50 via-rose-50 to-slate-100' },
+    { id: 'black', name: '至尊黑', color: 'bg-zinc-900', preview: 'bg-slate-900' },
+    { id: 'blue', name: '禅意蓝', color: 'bg-blue-900', preview: 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50' },
     { id: 'rich', name: '招财进宝', color: 'bg-red-600', preview: "bg-[url('/bg_rich.jpg')] bg-cover bg-top" },
   ];
 
