@@ -17,6 +17,7 @@ import Login from './components/Login';
 import LoadingScreen from './components/LoadingScreen';
 import { supabase } from './services/supabase';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useParticleEffect } from './components/ui/ParticleEffect';
 
 // 页面层级定义 - 用于决定转场动画方向
 const PAGE_LEVEL: Record<ViewState, number> = {
@@ -70,6 +71,9 @@ const App: React.FC = () => {
   const [autoStartVoice, setAutoStartVoice] = useState(false);
   // Lifted state for filtering (also used for default selection in AddRecord)
   const [selectedCircleId, setSelectedCircleId] = useState<string>('all');
+
+  // 粒子特效系统
+  const particleEffect = useParticleEffect();
 
   // 计算页面切换方向 - 用于转场动画
   const direction = useMemo(() => {
@@ -284,6 +288,20 @@ const App: React.FC = () => {
       // Batch insert new records
       if (recordsToAdd.length > 0) {
         await Storage.addRecordsBatch(recordsToAdd, user.id);
+      }
+
+      // 触发粒子特效（仅在单个新记录时）
+      if (recordsToAdd.length === 1) {
+        const newRecord = recordsToAdd[0];
+        const totalAmount = newRecord.amount;
+        // 延迟触发，让页面切换动画先开始
+        setTimeout(() => {
+          if (totalAmount > 0) {
+            particleEffect.trigger('win');
+          } else if (totalAmount < 0) {
+            particleEffect.trigger('loss');
+          }
+        }, 300);
       }
 
       setEditingRecord(null); // Clear edit state
@@ -524,6 +542,9 @@ const App: React.FC = () => {
         />
       )}
       <LoadingScreen isVisible={isLoading && view !== ViewState.LOGIN} />
+
+      {/* 粒子特效 */}
+      <particleEffect.Component />
     </div>
   );
 };

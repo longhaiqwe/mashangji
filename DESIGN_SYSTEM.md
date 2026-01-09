@@ -110,6 +110,38 @@ import { Button, PillButton, FloatingActionButton } from './components/ui/Button
 - `loss` - 亏损按钮（绿）
 - `danger` - 危险操作
 
+#### ParticleEffect 组件 (`components/ui/ParticleEffect.tsx`)
+```tsx
+import { ParticleEffect, useParticleEffect } from './components/ui/ParticleEffect';
+
+// 使用 Hook
+const particleEffect = useParticleEffect();
+
+// 触发粒子特效
+particleEffect.trigger('win'); // 盈利：红色金色爆发
+particleEffect.trigger('loss'); // 亏损：绿色雨滴
+
+// 渲染粒子组件
+<particleEffect.Component />
+
+// 直接使用组件
+<ParticleEffect
+  type="win"
+  isVisible={true}
+  onComplete={() => console.log('Animation finished')}
+/>
+```
+
+**特效类型**：
+- `win` - 红色金色爆发粒子（盈利庆祝，150个粒子 + 30个金色星星）
+- `loss` - 绿色雨滴粒子（亏损安慰，80个雨滴从天而降）
+
+**特性**：
+- Canvas 高性能渲染
+- 自定义缓动曲线
+- 自动清理和销毁
+- 支持持续时间配置
+
 ### 3. 页面重构 ✅
 
 #### Dashboard 页面
@@ -180,14 +212,14 @@ className="gradient-border"
 ## 📝 待完成的工作
 
 ### 第二阶段
-- [ ] Statistics 页面重构（自定义图表样式）
+- [x] Statistics 页面重构（自定义图表样式）✅
 - [ ] AddRecord 页面优化（自定义数字键盘）
 - [ ] CircleManager 页面优化（拖拽效果）
 - [ ] Settings 页面优化
 
 ### 第三阶段
-- [ ] 粒子特效系统（盈利红色粒子、亏损绿色雨滴）
-- [ ] 页面转场动画（使用 AnimatePresence）
+- [x] 粒子特效系统（盈利红色粒子、亏损绿色雨滴）✅
+- [x] 页面转场动画（使用 AnimatePresence）✅
 - [ ] 触觉反馈集成（Haptics）
 - [ ] 深色模式完善
 
