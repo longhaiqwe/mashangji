@@ -2,12 +2,16 @@
 import React, { useMemo, useState } from 'react';
 import { Record, Circle } from '../types';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, CartesianGrid } from 'recharts';
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, TrendingUp, Target, Zap } from 'lucide-react';
+import { Card, StatCard } from './ui/Card';
+import { Amount } from './ui/Amount';
+import { PillButton } from './ui/Button';
+import { motion } from 'framer-motion';
 
 interface StatisticsProps {
   records: Record[];
   circles: Circle[];
-  themeId?: 'default' | 'green' | 'red' | 'custom';
+  themeId?: string;
 }
 
 type TimeRange = 'week' | 'month' | 'year' | 'all';
@@ -15,6 +19,11 @@ type TimeRange = 'week' | 'month' | 'year' | 'all';
 const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'default' }) => {
   const [timeRange, setTimeRange] = useState<TimeRange>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // 判断是否为深色主题
+  const isDarkTheme = themeId === 'black' || themeId === 'rich';
+  // 默认使用浅色背景
+  const bgClass = 'bg-light-bg-primary';
 
   // Helper: Get start and end of the week (Monday based)
   const getWeekRange = (d: Date) => {
@@ -382,270 +391,411 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
     return { title, description, type, thisWeekPnL, lastWeekPnL };
   }, [records]); // Re-calc when records change
 
-  // Apply glass effect for any theme that isn't the default gray
-  const isCustomTheme = themeId !== 'default';
+  // 颜色常量（固定使用浅色主题配色）
+  const COLOR_WIN = '#f43f5e';
+  const COLOR_LOSS = '#10b981';
+  const COLOR_AXIS = '#cbd5e1';
+  const COLOR_TEXT = '#64748b';
+  const COLOR_GRID = '#f1f5f9';
 
-  // Theme logic: Mostly light/clean now.
-  const isDarkTheme = themeId === 'black' || themeId === 'rich';
-
-  // Constants for Chart Colors (using new Design System)
-  const COLOR_WIN = '#f43f5e'; // Rose 500 (Win)
-  const COLOR_LOSS = '#10b981'; // Emerald 500 (Loss)
-  const COLOR_AXIS = '#cbd5e1'; // Slate 300
-  const COLOR_TEXT = '#64748b'; // Slate 500
+  const textPrimary = 'text-dark-bg-primary';
+  const textSecondary = 'text-slate-500';
 
   return (
-    <div className={`flex flex-col h-full overflow-hidden ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
-      {/* Top Bar with Title and Tabs */}
-      <div className={`pt-safe-top px-6 pb-4 flex-shrink-0 z-10 transition-colors`}>
-        <div className="flex justify-between items-center mb-6 mt-4">
-          <h2 className={`font-bold text-xl tracking-tight ${isDarkTheme ? 'text-white' : 'text-slate-900'}`}>统计分析</h2>
+    <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* ============ 顶部区域 ============ */}
+      <motion.div
+        className="safe-top px-6 pb-4 flex-shrink-0 z-10"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        {/* 标题和时间筛选器 */}
+        <div className="mb-6 mt-4">
+          <h2 className={`font-bold text-2xl tracking-tight mb-5 ${textPrimary}`}>
+            统计分析
+          </h2>
 
-          <div className={`p-1 rounded-full flex text-xs font-bold ${isDarkTheme ? 'bg-white/10' : 'bg-slate-100'}`}>
-            {(['week', 'month', 'year', 'all'] as const).map(range => (
-              <button
+          {/* Pill 按钮组 */}
+          <div className="flex overflow-x-auto no-scrollbar space-x-2 pb-2 -mx-6 px-6">
+            {(['week', 'month', 'year', 'all'] as const).map((range, index) => (
+              <motion.div
                 key={range}
-                onClick={() => {
-                  setTimeRange(range);
-                  setCurrentDate(new Date());
-                }}
-                className={`px-4 py-1.5 rounded-full transition-all duration-300 ${timeRange === range
-                  ? (isDarkTheme ? 'bg-white text-black shadow-md' : 'bg-white text-primary-600 shadow-sm ring-1 ring-black/5')
-                  : (isDarkTheme ? 'text-white/60 hover:bg-white/10' : 'text-slate-500 hover:bg-slate-200/50')
-                  }`}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
               >
-                {range === 'week' ? '周' : range === 'month' ? '月' : range === 'year' ? '年' : '全部'}
-              </button>
+                <PillButton
+                  active={timeRange === range}
+                  onClick={() => {
+                    setTimeRange(range);
+                    setCurrentDate(new Date());
+                  }}
+                  className={timeRange === range ? 'bg-win-crimson' : ''}
+                >
+                  {range === 'week' ? '周' : range === 'month' ? '月' : range === 'year' ? '年' : '全部'}
+                </PillButton>
+              </motion.div>
             ))}
           </div>
         </div>
 
-        {/* Date Navigator */}
+        {/* 日期导航器 */}
         {timeRange !== 'all' && (
-          <div className="flex items-center justify-between pb-2">
+          <motion.div
+            className="flex items-center justify-between pb-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
             <button
               onClick={() => handleNavigate('prev')}
-              className={`p-2 rounded-full transition-colors ${isDarkTheme ? 'hover:bg-white/10 text-white' : 'hover:bg-slate-100 text-slate-600'}`}
+              className={`p-2 rounded-full transition-all duration-200 ${
+                isDarkTheme
+                  ? 'hover:bg-white/10 text-white active:scale-95'
+                  : 'hover:bg-slate-100 text-slate-600 active:scale-95'
+              }`}
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <div className={`flex items-center font-bold text-base ${isDarkTheme ? 'text-white' : 'text-slate-700'}`}>
+            <div className={`flex items-center font-bold text-base ${textPrimary}`}>
               <Calendar className="w-4 h-4 mr-2 opacity-60" />
               {getDateLabel()}
             </div>
             <button
               onClick={() => handleNavigate('next')}
-              className={`p-2 rounded-full transition-colors ${isDarkTheme ? 'hover:bg-white/10 text-white' : 'hover:bg-slate-100 text-slate-600'}`}
+              className={`p-2 rounded-full transition-all duration-200 ${
+                isDarkTheme
+                  ? 'hover:bg-white/10 text-white active:scale-95'
+                  : 'hover:bg-slate-100 text-slate-600 active:scale-95'
+              }`}
             >
               <ChevronRight className="w-5 h-5" />
             </button>
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
-      <div className="flex-1 px-5 space-y-5 overflow-y-auto pb-safe-bottom scrollbar-hide">
+      {/* ============ 内容区域 ============ */}
+      <div className="flex-1 overflow-y-auto px-4 py-2 space-y-4 safe-bottom">
 
-        {/* Fortune Card - New Design */}
+        {/* 运式卡片 - 周视图时显示 */}
         {timeRange === 'week' && (
-          <div className={`rounded-3xl p-5 shadow-sm relative overflow-hidden ${isDarkTheme ? 'bg-slate-800' : 'bg-gradient-to-br from-indigo-50 to-white border border-indigo-50'}`}>
-            <div className="absolute -right-4 -top-4 opacity-10 pointer-events-none transform rotate-12">
-              <span style={{ fontSize: '100px' }}>
-                {fortune.type === 'good' ? '🧧' : fortune.type === 'bad' ? '🌧️' : fortune.type === 'warning' ? '⚡️' : '🍵'}
-              </span>
-            </div>
-
-            <div className="relative z-10">
-              <div className="flex items-center space-x-2 mb-2">
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isDarkTheme ? 'bg-white/10 text-white/70' : 'bg-white/60 text-indigo-400'
-                  }`}>本周运势</span>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+          >
+            <Card
+              variant={fortune.type === 'good' ? 'win' : fortune.type === 'bad' ? 'loss' : 'glass'}
+              size="md"
+              className="relative overflow-hidden bg-white border-slate-100"
+              hover={false}
+              delay={0}
+            >
+              {/* 背景装饰 */}
+              <div className="absolute -right-4 -top-4 opacity-10 pointer-events-none transform rotate-12">
+                <span className="text-9xl">
+                  {fortune.type === 'good' ? '🧧' : fortune.type === 'bad' ? '🌧️' : fortune.type === 'warning' ? '⚡️' : '🍵'}
+                </span>
               </div>
-              <h3 className={`text-2xl font-black mb-1.5 ${fortune.type === 'good' ? 'text-rose-500' :
-                fortune.type === 'bad' ? 'text-emerald-500' :
-                  fortune.type === 'warning' ? 'text-orange-500' :
-                    'text-slate-700'
+
+              <div className="relative z-10">
+                <div className="flex items-center space-x-2 mb-2">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white/70">
+                    本周运势
+                  </span>
+                </div>
+                <h3 className={`text-2xl font-black mb-1.5 ${
+                  fortune.type === 'good' ? 'text-win-crimson' :
+                  fortune.type === 'bad' ? 'text-loss-emerald' :
+                  fortune.type === 'warning' ? 'text-orange-500' : 'text-white'
                 }`}>
-                {fortune.title}
-              </h3>
-              <p className={`text-sm font-medium ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
-                {fortune.description}
+                  {fortune.title}
+                </h3>
+                <p className={`text-sm font-medium ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {fortune.description}
+                </p>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* 概览统计卡片 */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* 总盈亏 - 占满整行 */}
+          <motion.div
+            className="col-span-2"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card
+              variant={stats.totalPnL >= 0 ? 'win' : 'loss'}
+              size="md"
+              className="text-center bg-white border-slate-100"
+              hover={false}
+              delay={0}
+            >
+              <p className="text-xs font-bold uppercase tracking-wider mb-2 opacity-70">
+                {timeRange === 'all' ? '总盈亏' : '期间盈亏'}
               </p>
-            </div>
-          </div>
-        )}
+              <Amount
+                amount={stats.totalPnL}
+                size="xl"
+                showSign
+                className="font-black"
+              />
+            </Card>
+          </motion.div>
 
-        {/* Overview Stats Cards */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className={`rounded-3xl p-5 col-span-2 shadow-sm border transition-all ${isDarkTheme ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'
-            }`}>
-            <div className={`text-sm font-bold uppercase tracking-wider mb-1 ${isDarkTheme ? 'text-slate-400' : 'text-slate-400'}`}>
-              {timeRange === 'all' ? '总亏盈 (Total)' : '期间盈亏 (Net)'}
+          {/* 场次 */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+          >
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+              <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">场次</div>
+              <div className="text-2xl font-bold text-slate-800">{stats.totalGames} <span className="text-xs font-normal text-slate-400">场</span></div>
             </div>
-            <div className={`text-5xl font-black font-mono tracking-tight my-2 ${stats.totalPnL >= 0 ? 'text-win' : 'text-loss'}`}>
-              {stats.totalPnL > 0 ? '+' : ''}{stats.totalPnL}
-            </div>
-          </div>
+          </motion.div>
 
-          <div className={`rounded-2xl p-4 shadow-sm border ${isDarkTheme ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-            <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDarkTheme ? 'text-slate-400' : 'text-slate-400'}`}>场次</div>
-            <div className={`text-2xl font-bold ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
-              {stats.totalGames} <span className="text-xs font-normal text-slate-400">场</span>
-            </div>
-          </div>
-
-          <div className={`rounded-2xl p-4 shadow-sm border ${isDarkTheme ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-            <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${isDarkTheme ? 'text-slate-400' : 'text-slate-400'}`}>胜率</div>
-            <div className={`text-2xl font-bold ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
-              {stats.totalGames > 0 ? Math.round((stats.totalWins / stats.totalGames) * 100) : 0}
-              <span className="text-xs font-normal text-slate-400">%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Trend Chart */}
-        {timeRange !== 'all' && trendData.length > 0 && (
-          <div className={`rounded-3xl p-5 shadow-sm border min-h-[320px] pb-8 ${isDarkTheme ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-            <h3 className={`font-bold text-sm mb-6 ${isDarkTheme ? 'text-slate-300' : 'text-slate-800'}`}>
-              {timeRange === 'week' ? '每日走势' : timeRange === 'month' ? '周度走势' : '月度走势'}
-            </h3>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke={isDarkTheme ? '#334155' : '#f1f5f9'}
-                  />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 10, fill: COLOR_TEXT }}
-                    axisLine={false}
-                    tickLine={false}
-                    dy={10}
-                    interval={timeRange === 'week' ? 0 : 'preserveStartEnd'}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: COLOR_TEXT }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    cursor={{ stroke: COLOR_AXIS, strokeWidth: 1, strokeDasharray: '4 4' }}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const val = payload[0].value as number;
-                        return (
-                          <div className="bg-white p-3 rounded-xl shadow-xl border border-slate-100 text-xs text-slate-600">
-                            <div className="font-bold text-slate-800 mb-1">{payload[0].payload.label}</div>
-                            <div className={`font-mono text-sm font-bold ${val >= 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                              {val > 0 ? '+' : ''}{val}
-                            </div>
-                          </div>
-                        )
-                      }
-                      return null;
-                    }}
-                  />
-                  <ReferenceLine y={0} stroke={isDarkTheme ? "#475569" : "#cbd5e1"} />
-                  <Line
-                    type="monotone"
-                    dataKey="amount"
-                    stroke={COLOR_WIN} // We generally use the primary color for the line
-                    strokeWidth={3}
-                    dot={{ fill: 'white', stroke: COLOR_WIN, strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, fill: COLOR_WIN, stroke: 'white', strokeWidth: 2 }}
-                    animationDuration={1000}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-
-        {/* Distribution Chart */}
-        <div className={`rounded-3xl p-5 shadow-sm border min-h-[300px] ${isDarkTheme ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-          <h3 className={`font-bold text-sm mb-4 ${isDarkTheme ? 'text-slate-300' : 'text-slate-800'}`}>圈子盈亏分布</h3>
-          {stats.chartData.length > 0 ? (
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.chartData} layout="vertical" margin={{ top: 0, right: 30, left: 30, bottom: 0 }}>
-                  <XAxis type="number" hide domain={[-stats.maxAbs, stats.maxAbs]} />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    width={80}
-                    tick={{ fontSize: 12, fill: isDarkTheme ? '#cbd5e1' : '#475569', fontWeight: 500 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    cursor={{ fill: isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const val = payload[0].value as number;
-                        return (
-                          <div className="bg-white p-3 rounded-xl shadow-xl border border-slate-100 text-xs text-slate-600">
-                            <div className="font-bold text-slate-800 mb-1">{payload[0].payload.name}</div>
-                            <div className={`font-mono text-sm font-bold ${val >= 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                              {val > 0 ? '+' : ''}{val}
-                            </div>
-                          </div>
-                        )
-                      }
-                      return null;
-                    }}
-                  />
-                  <ReferenceLine x={0} stroke={isDarkTheme ? "#475569" : "#e2e8f0"} />
-                  <Bar dataKey="amount" radius={[0, 4, 4, 0]} barSize={24}>
-                    {stats.chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.amount >= 0 ? COLOR_WIN : COLOR_LOSS} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <div className={`h-40 flex items-center justify-center text-sm ${isDarkTheme ? 'text-slate-500' : 'text-slate-400'}`}>
-              <div className="text-center">
-                <div className="text-2xl mb-2 opacity-50">📊</div>
-                该时段暂无数据
+          {/* 胜率 */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+              <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">胜率</div>
+              <div className="text-2xl font-bold text-slate-800">
+                {stats.totalGames > 0 ? Math.round((stats.totalWins / stats.totalGames) * 100) : 0}
+                <span className="text-xs font-normal text-slate-400">%</span>
               </div>
             </div>
-          )}
+          </motion.div>
         </div>
 
-        {/* Year Insights (Only show in Year view) */}
-        {timeRange === 'year' && (
-          <div className={`rounded-3xl p-5 shadow-sm border mb-8 ${isDarkTheme ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-            <h3 className={`font-bold text-base mb-4 ${isDarkTheme ? 'text-white' : 'text-slate-900'}`}>{insights.year} 年度复盘</h3>
-
-            {insights.totalGames > 0 ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className={`p-3 rounded-2xl ${isDarkTheme ? 'bg-white/5' : 'bg-slate-50'}`}>
-                    <div className="text-xs text-slate-500 mb-1">最大单笔盈利</div>
-                    <div className="text-rose-600 font-bold font-mono text-lg">{insights.maxWinAmount > 0 ? '+' + insights.maxWinAmount : '-'}</div>
-                    <div className="text-[10px] text-slate-400">{insights.maxWinDate}</div>
-                  </div>
-                  <div className={`p-3 rounded-2xl ${isDarkTheme ? 'bg-white/5' : 'bg-slate-50'}`}>
-                    <div className="text-xs text-slate-500 mb-1">最大单笔亏损</div>
-                    <div className="text-emerald-500 font-bold font-mono text-lg">{insights.maxLossAmount < 0 ? insights.maxLossAmount : '-'}</div>
-                    <div className="text-[10px] text-slate-400">{insights.maxLossDate}</div>
-                  </div>
+        {/* 走势图 */}
+        {timeRange !== 'all' && trendData.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+          >
+            <Card
+              variant="glass"
+              size="md"
+              className="min-h-[320px] pb-4 bg-white border-slate-100"
+              hover={false}
+              delay={0}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className={`font-bold text-sm ${textPrimary}`}>
+                  {timeRange === 'week' ? '每日走势' : timeRange === 'month' ? '周度走势' : '月度走势'}
+                </h3>
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 rounded-full bg-win-crimson"></div>
+                  <div className="w-2 h-2 rounded-full bg-loss-emerald"></div>
                 </div>
+              </div>
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke={COLOR_GRID}
+                    />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fontSize: 10, fill: COLOR_TEXT }}
+                      axisLine={false}
+                      tickLine={false}
+                      dy={10}
+                      interval={timeRange === 'week' ? 0 : 'preserveStartEnd'}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 10, fill: COLOR_TEXT }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      cursor={{ stroke: COLOR_AXIS, strokeWidth: 1, strokeDasharray: '4 4' }}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const val = payload[0].value as number;
+                          return (
+                            <div className={`p-3 rounded-xl shadow-xl border text-xs ${
+                              isDarkTheme
+                                ? 'bg-slate-800 border-slate-600'
+                                : 'bg-white border-slate-100'
+                            }`}>
+                              <div className={`font-bold mb-1 ${textPrimary}`}>{payload[0].payload.label}</div>
+                              <Amount amount={val} size="sm" showSign />
+                            </div>
+                          )
+                        }
+                        return null;
+                      }}
+                    />
+                    <ReferenceLine y={0} stroke={COLOR_AXIS} />
+                    <Line
+                      type="monotone"
+                      dataKey="amount"
+                      stroke={COLOR_WIN}
+                      strokeWidth={3}
+                      dot={{ fill: isDarkTheme ? '#1e293b' : 'white', stroke: COLOR_WIN, strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6, fill: COLOR_WIN, stroke: isDarkTheme ? '#1e293b' : 'white', strokeWidth: 2 }}
+                      animationDuration={1000}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </motion.div>
+        )}
 
-                <div className="space-y-2">
-                  {insights.monthlyRecap.map((t, i) => (
-                    <div key={i} className={`text-xs px-3 py-2 rounded-lg flex items-start ${isDarkTheme ? 'bg-white/5 text-slate-300' : 'bg-slate-50 text-slate-600'}`}>
-                      <span className="mr-2 mt-0.5 text-rose-500 font-bold">•</span>
-                      {t}
-                    </div>
-                  ))}
-                </div>
+        {/* 圈子盈亏分布 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Card
+            variant="glass"
+            size="md"
+            className="min-h-[280px] bg-white border-slate-100"
+            hover={false}
+            delay={0}
+          >
+            <h3 className={`font-bold text-sm mb-4 ${textPrimary}`}>圈子盈亏分布</h3>
+            {stats.chartData.length > 0 ? (
+              <div className="h-64 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.chartData} layout="vertical" margin={{ top: 0, right: 30, left: 30, bottom: 0 }}>
+                    <XAxis type="number" hide domain={[-stats.maxAbs, stats.maxAbs]} />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      width={80}
+                      tick={{ fontSize: 12, fill: COLOR_TEXT, fontWeight: 500 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      cursor={{ fill: isDarkTheme ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const val = payload[0].value as number;
+                          return (
+                            <div className={`p-3 rounded-xl shadow-xl border text-xs ${
+                              isDarkTheme
+                                ? 'bg-slate-800 border-slate-600'
+                                : 'bg-white border-slate-100'
+                            }`}>
+                              <div className={`font-bold mb-1 ${textPrimary}`}>{payload[0].payload.name}</div>
+                              <Amount amount={val} size="sm" showSign />
+                            </div>
+                          )
+                        }
+                        return null;
+                      }}
+                    />
+                    <ReferenceLine x={0} stroke={COLOR_AXIS} />
+                    <Bar dataKey="amount" radius={[0, 4, 4, 0]} barSize={24}>
+                      {stats.chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.amount >= 0 ? COLOR_WIN : COLOR_LOSS} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             ) : (
-              <div className="text-center text-slate-400 py-4 text-sm">暂无年度数据</div>
+              <div className={`h-40 flex items-center justify-center ${textSecondary}`}>
+                <div className="text-center">
+                  <div className="text-4xl mb-2 opacity-30">📊</div>
+                  <p className="text-sm">该时段暂无数据</p>
+                </div>
+              </div>
             )}
-          </div>
+          </Card>
+        </motion.div>
+
+        {/* 年度复盘 */}
+        {timeRange === 'year' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.55 }}
+            className="mb-8"
+          >
+            <Card
+              variant="glass"
+              size="md"
+              className="bg-white border-slate-100"
+              hover={false}
+              delay={0}
+            >
+              <div className="flex items-center space-x-2 mb-4">
+                <Zap className={`w-5 h-5 text-luxury-gold-500`} />
+                <h3 className={`font-bold text-base ${textPrimary}`}>{insights.year} 年度复盘</h3>
+              </div>
+
+              {insights.totalGames > 0 ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <motion.div
+                      className={`p-3 rounded-2xl ${
+                        isDarkTheme ? 'bg-white/5' : 'bg-slate-50'
+                      }`}
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="text-xs text-slate-500 mb-1">最大单笔盈利</div>
+                      <Amount amount={insights.maxWinAmount} size="md" showSign />
+                      <div className="text-[10px] text-slate-400 mt-1">{insights.maxWinDate}</div>
+                    </motion.div>
+
+                    <motion.div
+                      className={`p-3 rounded-2xl ${
+                        isDarkTheme ? 'bg-white/5' : 'bg-slate-50'
+                      }`}
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <div className="text-xs text-slate-500 mb-1">最大单笔亏损</div>
+                      <Amount amount={insights.maxLossAmount} size="md" showSign />
+                      <div className="text-[10px] text-slate-400 mt-1">{insights.maxLossDate}</div>
+                    </motion.div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {insights.monthlyRecap.map((t, i) => (
+                      <motion.div
+                        key={i}
+                        className={`text-xs px-3 py-2 rounded-lg flex items-start ${
+                          isDarkTheme ? 'bg-white/5 text-slate-300' : 'bg-slate-50 text-slate-600'
+                        }`}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.6 + i * 0.05 }}
+                      >
+                        <span className="mr-2 mt-0.5 text-win-crimson font-bold">•</span>
+                        {t}
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className={`text-center py-8 ${textSecondary}`}>
+                  <div className="text-3xl mb-2 opacity-30">📅</div>
+                  <p className="text-sm">暂无年度数据</p>
+                </div>
+              )}
+            </Card>
+          </motion.div>
         )}
 
         <div className="h-20"></div>

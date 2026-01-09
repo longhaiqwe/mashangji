@@ -1,3 +1,6 @@
+/* 引入设计系统主题样式 - 必须在最前面 */
+@import './styles/theme.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,6 +9,10 @@
   body {
     @apply antialiased text-slate-900 bg-slate-50;
     -webkit-tap-highlight-color: transparent;
+    /* 优化移动端字体渲染 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 }
 

@@ -1,9 +1,11 @@
-
-import React, { useMemo, useState } from 'react';
-
+import React, { useMemo } from 'react';
 import { Record, Circle, ViewState } from '../types';
-import { Trash2, Edit2, Wallet } from 'lucide-react';
+import { Trash2, Edit2, Wallet, TrendingUp } from 'lucide-react';
 import SwipeableItem from './SwipeableItem';
+import { Card, WealthCard } from './ui/Card';
+import { Amount } from './ui/Amount';
+import { PillButton } from './ui/Button';
+import { motion } from 'framer-motion';
 
 interface DashboardProps {
   records: Record[];
@@ -26,9 +28,10 @@ const Dashboard: React.FC<DashboardProps> = ({
   selectedCircleId,
   onSelectCircle
 }) => {
-  // Most themes are now "Light" (soft gradients). Only 'black' or 'rich' might be dark.
+  // 判断是否为深色主题
   const isDarkTheme = themeId === 'black' || themeId === 'rich';
 
+  // 过滤和排序记录
   const filteredRecords = useMemo(() => {
     let sorted = [...records].sort((a, b) => b.timestamp - a.timestamp);
     if (selectedCircleId !== 'all') {
@@ -37,6 +40,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     return sorted;
   }, [records, selectedCircleId]);
 
+  // 计算本月统计数据
   const currentMonthStats = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -51,154 +55,203 @@ const Dashboard: React.FC<DashboardProps> = ({
     }, 0);
   }, [filteredRecords]);
 
+  // 计算上月数据（用于显示涨跌幅）
+  const lastMonthStats = useMemo(() => {
+    const now = new Date();
+    const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+    const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+
+    return filteredRecords.reduce((acc, curr) => {
+      const d = new Date(curr.date);
+      if (d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear) {
+        return acc + curr.amount;
+      }
+      return acc;
+    }, 0);
+  }, [filteredRecords]);
+
+  // 计算涨跌幅
+  const trend = lastMonthStats !== 0
+    ? ((currentMonthStats - lastMonthStats) / Math.abs(lastMonthStats)) * 100
+    : 0;
+
   const getCircleName = (id: string) => circles.find(c => c.id === id)?.name || '未知圈子';
 
-  const formatMoney = (amount: number) => {
-    return amount > 0 ? `+${amount}` : `${amount}`;
-  };
-
-  // Header styles: Cleaner, less glass, more solid typography
-  // For dark themes, keep white text. For light themes (default/green/red/blue), use dark text.
-  const headerTextLabelClass = isDarkTheme ? 'text-slate-400' : 'text-slate-500';
-  const headerTextValueClass = isDarkTheme ? 'text-white' : 'text-slate-900';
-
-  const filterButtonClass = (isActive: boolean) => {
-    if (isActive) {
-      // Active: Solid Primary Color or Dark Slate
-      return 'bg-slate-900 text-white shadow-md scale-105';
-    }
-    // Inactive
-    return isDarkTheme
-      ? 'bg-white/10 text-white border border-white/10 hover:bg-white/20'
-      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50';
-  };
+  const textPrimary = isDarkTheme ? 'text-white' : 'text-dark-bg-primary';
+  const textSecondary = isDarkTheme ? 'text-slate-400' : 'text-slate-500';
+  const bgClass = isDarkTheme ? 'bg-dark-bg-primary' : 'bg-light-bg-primary';
 
   return (
-    <div className={`flex flex-col h-full ${isDarkTheme ? '' : 'bg-transparent'}`}>
-      {/* Header / Summary Card */}
-      <div className={`pt-safe-top px-6 pb-4 flex-shrink-0 z-10 relative transition-all duration-300`}>
-        <div className="flex justify-between items-center mb-6 mt-4">
-          <div>
-            <h2 className={`${headerTextLabelClass} text-sm font-medium mb-1 tracking-wide`}>本月累计盈亏</h2>
-            <div className={`text-4xl font-bold tracking-tight ${headerTextValueClass} font-mono`}>
-              <span className="text-2xl mr-1 opacity-60">¥</span>
-              {formatMoney(currentMonthStats)}
-            </div>
-          </div>
-          <div className={`p-3 rounded-2xl backdrop-blur-sm shadow-sm ${isDarkTheme ? 'bg-white/10' : 'bg-white/60'}`}>
-            <Wallet className={`${isDarkTheme ? 'text-white' : 'text-slate-700'} w-6 h-6`} />
-          </div>
-        </div>
+    <div className={`flex flex-col h-full ${bgClass}`}>
+      {/* ============ 顶部区域 ============ */}
+      <motion.div
+        className="safe-top px-6 pb-4 flex-shrink-0 z-10"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        {/* 财富卡片 */}
+        <WealthCard
+          amount={currentMonthStats}
+          subtitle="本月累计盈亏"
+          trend={Math.round(trend)}
+          className="mb-6"
+          delay={100}
+        />
 
-        {/* Quick Filter Pill - Modern Clean Look */}
+        {/* 圈子筛选 - Pill 按钮组 */}
         <div className="flex overflow-x-auto no-scrollbar space-x-2 pb-2 -mx-6 px-6">
-          <button
+          <PillButton
+            active={selectedCircleId === 'all'}
             onClick={() => onSelectCircle('all')}
-            className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${filterButtonClass(selectedCircleId === 'all')}`}
+            className={selectedCircleId === 'all' ? 'bg-win-crimson' : ''}
           >
             全部
-          </button>
-          {circles.map(circle => (
-            <button
+          </PillButton>
+          {circles.map((circle, index) => (
+            <PillButton
               key={circle.id}
+              active={selectedCircleId === circle.id}
               onClick={() => onSelectCircle(circle.id)}
-              className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${filterButtonClass(selectedCircleId === circle.id)}`}
+              className={selectedCircleId === circle.id ? 'bg-win-crimson' : ''}
             >
               {circle.name}
-            </button>
+            </PillButton>
           ))}
         </div>
-      </div>
+      </motion.div>
 
-      {/* Transactions List */}
-      <div className="flex-1 overflow-y-auto px-4 py-2 space-y-3 pb-safe-bottom">
-        <div className="flex items-center justify-between px-1 mb-2">
-          <h3 className={`text-xs font-bold uppercase tracking-wider px-2 py-1 ${isDarkTheme ? 'text-slate-400' : 'text-slate-400'}`}>近期战绩</h3>
-          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${isDarkTheme ? 'bg-white/10 text-slate-300' : 'bg-slate-200/60 text-slate-500'}`}>{filteredRecords.length} 笔</span>
-        </div>
+      {/* ============ 近期战绩列表 ============ */}
+      <div className="flex-1 overflow-y-auto px-4 py-2 space-y-3 safe-bottom">
+        {/* 列表头部 */}
+        <motion.div
+          className="flex items-center justify-between px-1 mb-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <h3 className={`text-xs font-bold uppercase tracking-wider ${textSecondary}`}>
+            近期战绩
+          </h3>
+          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+            isDarkTheme ? 'bg-white/10 text-slate-300' : 'bg-slate-200/60 text-slate-500'
+          }`}>
+            {filteredRecords.length} 笔
+          </span>
+        </motion.div>
 
+        {/* 空状态 */}
         {filteredRecords.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 opacity-60">
-            <div className={`w-16 h-16 rounded-3xl flex items-center justify-center mb-4 ${isDarkTheme ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-400'}`}>
+          <motion.div
+            className="flex flex-col items-center justify-center h-64 opacity-60"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 0.6, scale: 1 }}
+            transition={{ delay: 0.4 }}
+          >
+            <div className={`w-16 h-16 rounded-3xl flex items-center justify-center mb-4 ${
+              isDarkTheme ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-400'
+            }`}>
               <Edit2 className="w-8 h-8 opacity-50" />
             </div>
-            <p className={`text-sm font-medium ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-sm font-medium ${textSecondary}`}>
               暂无记录
             </p>
             <p className="text-xs text-slate-400 mt-1">点击下方按钮开始记账</p>
-            <button
+            <motion.button
               onClick={() => onNavigate(ViewState.ADD_RECORD)}
-              className="mt-6 font-bold text-sm bg-primary-500 text-white px-6 py-2.5 rounded-full shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform"
+              className="mt-6 font-bold text-sm bg-win-crimson text-white px-6 py-2.5 rounded-full shadow-win-glow hover:scale-105 transition-transform"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               + 记账
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
         ) : (
-          filteredRecords.map((record) => (
-            <SwipeableItem
-              key={record.id}
-              className="mb-3 rounded-2xl shadow-sm outline-none"
-              actions={[
-                {
-                  label: '编辑',
-                  icon: <Edit2 size={18} />,
-                  color: 'bg-indigo-500',
-                  onClick: () => onEditRecord(record)
-                },
-                {
-                  label: '删除',
-                  icon: <Trash2 size={18} />,
-                  color: 'bg-rose-500', // Keep Delete as Red (Danger)
-                  onClick: () => onDeleteRecord(record.id)
-                }
-              ]}
-            >
-              <div
-                className={`p-4 transition-all active:scale-[0.98] ${isDarkTheme
-                  ? 'bg-slate-800 border border-slate-700/50'
-                  : 'bg-white border border-slate-100' // Clean white card
-                  }`}
+          /* 记录列表 */
+          <div className="space-y-3">
+            {filteredRecords.map((record, index) => (
+              <SwipeableItem
+                key={record.id}
+                className="rounded-2xl shadow-sm outline-none"
+                actions={[
+                  {
+                    label: '编辑',
+                    icon: <Edit2 size={18} />,
+                    color: 'bg-indigo-500',
+                    onClick: () => onEditRecord(record)
+                  },
+                  {
+                    label: '删除',
+                    icon: <Trash2 size={18} />,
+                    color: 'bg-rose-500',
+                    onClick: () => onDeleteRecord(record.id)
+                  }
+                ]}
               >
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center space-x-3.5">
-                    {/* Status Dot / Icon swap: Win(>0)=Red(Rose), Loss(<0)=Green(Emerald) */}
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${record.amount >= 0 ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-600'
-                      }`}>
-                      <div className={`w-2.5 h-2.5 rounded-full ${record.amount >= 0 ? 'bg-rose-500' : 'bg-emerald-500'}`}></div>
+                <motion.div
+                  className={`p-4 transition-all active:scale-[0.98] ${
+                    isDarkTheme
+                      ? 'bg-dark-bg-secondary border border-dark-border/20'
+                      : 'bg-white border border-slate-100'
+                  }`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: 0.1 * index,
+                    duration: 0.3,
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex justify-between items-center">
+                    {/* 左侧：圈子图标和信息 */}
+                    <div className="flex items-center space-x-3.5">
+                      {/* 状态图标 */}
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          record.amount >= 0 ? 'bg-win-crimson/20 text-win-crimson' : 'bg-loss-emerald/20 text-loss-emerald'
+                        }`}
+                      >
+                        <Wallet className="w-5 h-5" />
+                      </div>
+
+                      <div>
+                        <div className={`font-bold text-base ${textPrimary}`}>
+                          {getCircleName(record.circleId)}
+                        </div>
+                        <div className="flex items-center space-x-2 mt-0.5">
+                          <span className={`text-xs ${textSecondary}`}>{record.date}</span>
+                          {record.note && (
+                            <>
+                              <span className="text-slate-300 text-[9px] mx-0.5">•</span>
+                              <span className={`text-xs line-clamp-1 max-w-[120px] ${textSecondary}`}>
+                                {record.note}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className={`font-bold text-base ${isDarkTheme ? 'text-slate-100' : 'text-slate-800'}`}>{getCircleName(record.circleId)}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 mt-0.5">
-                        <span className={`text-xs ${isDarkTheme ? 'text-slate-400' : 'text-slate-400'}`}>{record.date}</span>
-                        {record.note && (
-                          <>
-                            <span className="text-slate-300 text-[9px] mx-0.5">•</span>
-                            <span className={`text-xs line-clamp-1 max-w-[120px] ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>{record.note}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                    {/* 右侧：金额 */}
+                    <Amount
+                      amount={record.amount}
+                      size="lg"
+                      showSign
+                      className="font-mono font-bold tracking-tight"
+                    />
                   </div>
-
-                  <div className={`font-mono font-bold text-lg tracking-tight ${record.amount >= 0 ? 'text-income' : 'text-expense'
-                    }`}>
-                    {formatMoney(record.amount)}
-                  </div>
-                </div>
-              </div>
-            </SwipeableItem>
-          ))
+                </motion.div>
+              </SwipeableItem>
+            ))}
+          </div>
         )}
 
-        <div className="h-20"></div> {/* Spacer for bottom nav */}
+        {/* 底部留白 */}
+        <div className="h-20"></div>
       </div>
     </div>
   );
 };
 
 export default Dashboard;
-
-

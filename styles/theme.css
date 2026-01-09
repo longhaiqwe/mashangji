@@ -1,0 +1,316 @@
+/**
+ * ========================================
+ * 马上记 - 设计系统主题样式
+ * 主题：金融终端 × 东方奢华
+ * ========================================
+ */
+
+/* ============ Google Fonts Import ============ */
+/* 在 index.html 中添加以下链接：
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&family=Noto+Sans+SC:wght@500;700&family=Noto+Serif+SC:wght@700&display=swap" rel="stylesheet">
+*/
+
+/* ============ CSS 变量定义 ============ */
+@layer base {
+  :root {
+    /* ============ 核心色彩 ============ */
+
+    /* 盈利色 - 猩红（中国股市风格） */
+    --color-win: #DC143C;
+    --color-win-light: #FF6B8A;
+    --color-win-dark: #B01030;
+    --color-win-bg: rgba(220, 20, 60, 0.1);
+
+    /* 亏损色 - 翠绿 */
+    --color-loss: #00C853;
+    --color-loss-light: #69F0AE;
+    --color-loss-dark: #009624;
+    --color-loss-bg: rgba(0, 200, 83, 0.1);
+
+    /* 奢华金 - 财富象征 */
+    --color-gold-primary: #D4AF37;
+    --color-gold-light: #F4E4BC;
+    --color-gold-dark: #B59328;
+    --color-gold-bg: rgba(212, 175, 55, 0.1);
+
+    /* ============ 深色主题 ============ */
+    --dark-bg-primary: #0A0E27;
+    --dark-bg-secondary: #151B3D;
+    --dark-bg-tertiary: #1F274D;
+    --dark-text-primary: #FFFFFF;
+    --dark-text-secondary: #B0B8C4;
+    --dark-border: rgba(212, 175, 55, 0.2);
+
+    /* ============ 浅色主题 ============ */
+    --light-bg-primary: #F8F9FA;
+    --light-bg-secondary: #FFFFFF;
+    --light-bg-tertiary: #F1F3F5;
+    --light-text-primary: #1A1A2E;
+    --light-text-secondary: #5A5A6E;
+    --light-border: rgba(212, 175, 55, 0.3);
+
+    /* ============ 阴影 ============ */
+    --shadow-gold: 0 0 20px rgba(212, 175, 55, 0.5), 0 0 40px rgba(212, 175, 55, 0.3);
+    --shadow-gold-sm: 0 0 10px rgba(212, 175, 55, 0.4);
+    --shadow-win: 0 0 20px rgba(220, 20, 60, 0.5), 0 0 40px rgba(220, 20, 60, 0.3);
+    --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-card-hover: 0 12px 48px rgba(212, 175, 55, 0.15), 0 4px 16px rgba(0, 0, 0, 0.2);
+
+    /* ============ 动画时长 ============ */
+    --duration-fast: 150ms;
+    --duration-normal: 300ms;
+    --duration-slow: 500ms;
+
+    /* ============ 缓动函数 ============ */
+    --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* ============ 全局基础样式 ============ */
+@layer base {
+  /* 滚动条美化 */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 dark:bg-slate-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400 dark:bg-slate-500;
+  }
+
+  /* 隐藏滚动条但保留功能 */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 无换行 */
+  .no-scrollbar {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 文本选择颜色 */
+  ::selection {
+    @apply bg-luxury-gold-500 text-white;
+  }
+
+  /* 焦点样式 */
+  *:focus-visible {
+    outline: 2px solid var(--color-gold-primary);
+    outline-offset: 2px;
+  }
+}
+
+/* ============ 工具类扩展 ============ */
+@layer utilities {
+  /* ============ 金色闪光效果 ============ */
+  .text-gold-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--color-gold-primary) 0%,
+      var(--color-gold-light) 50%,
+      var(--color-gold-primary) 100%
+    );
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gold-shimmer 3s linear infinite;
+  }
+
+  .bg-gold-shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--color-gold-primary) 0%,
+      var(--color-gold-light) 50%,
+      var(--color-gold-primary) 100%
+    );
+    background-size: 200% 100%;
+    animation: gold-shimmer 3s linear infinite;
+  }
+
+  /* ============ 玻璃态效果 ============ */
+  .glass {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .glass-dark {
+    background: linear-gradient(
+      135deg,
+      rgba(0, 0, 0, 0.3) 0%,
+      rgba(0, 0, 0, 0.1) 100%
+    );
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* ============ 3D 卡片效果 ============ */
+  .card-3d {
+    transform-style: preserve-3d;
+    transition: transform var(--duration-normal) var(--ease-bounce);
+  }
+
+  .card-3d:hover {
+    transform: translateY(-4px) rotateX(2deg);
+  }
+
+  /* ============ 发光效果 ============ */
+  .glow-gold {
+    box-shadow: var(--shadow-gold);
+  }
+
+  .glow-win {
+    box-shadow: var(--shadow-win);
+  }
+
+  /* ============ 渐变边框 ============ */
+  .gradient-border {
+    position: relative;
+    background: var(--dark-bg-secondary);
+    border-radius: 1.5rem;
+  }
+
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, var(--color-gold-primary), var(--color-gold-light), var(--color-gold-primary));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.5;
+    transition: opacity var(--duration-normal);
+  }
+
+  .gradient-border:hover::before {
+    opacity: 1;
+  }
+
+  /* ============ 微光扫过效果 ============ */
+  .shimmer-sweep {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer-sweep::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(212, 175, 55, 0.1) 50%,
+      transparent 100%
+    );
+    animation: shimmer-sweep 2s ease-in-out infinite;
+  }
+
+  /* ============ 数字字体优化 ============ */
+  .font-mono-numeric {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  /* ============ 金额显示样式 ============ */
+  .amount-display {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .amount-win {
+    color: var(--color-win);
+    text-shadow: 0 0 20px rgba(220, 20, 60, 0.3);
+  }
+
+  .amount-loss {
+    color: var(--color-loss);
+    text-shadow: 0 0 20px rgba(0, 200, 83, 0.3);
+  }
+
+  /* ============ 动画延迟类 ============ */
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-400 { animation-delay: 400ms; }
+  .delay-500 { animation-delay: 500ms; }
+  .delay-600 { animation-delay: 600ms; }
+
+  /* ============ 安全区域适配 ============ */
+  .safe-top {
+    padding-top: max(env(safe-area-inset-top), 16px);
+  }
+
+  .safe-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom), 16px);
+  }
+
+  .safe-left {
+    padding-left: max(env(safe-area-inset-left), 16px);
+  }
+
+  .safe-right {
+    padding-right: max(env(safe-area-inset-right), 16px);
+  }
+
+  .safe-all {
+    padding: max(env(safe-area-inset-top), 16px)
+             max(env(safe-area-inset-right), 16px)
+             max(env(safe-area-inset-bottom), 16px)
+             max(env(safe-area-inset-left), 16px);
+  }
+}
+
+/* ============ 关键帧动画定义 ============ */
+@keyframes gold-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ============ 深色模式特定样式 ============ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
+/* ============ 打印样式（如果需要） ============ */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
