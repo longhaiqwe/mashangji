@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Record, Circle, ViewState, UserPreferences, User } from './types';
 import * as Storage from './services/storageService';
 import { authService } from './services/authService';
@@ -16,12 +16,51 @@ import Feedback from './components/Feedback';
 import Login from './components/Login';
 import LoadingScreen from './components/LoadingScreen';
 import { supabase } from './services/supabase';
+import { AnimatePresence, motion } from 'framer-motion';
+
+// 页面层级定义 - 用于决定转场动画方向
+const PAGE_LEVEL: Record<ViewState, number> = {
+  [ViewState.LOGIN]: 0,
+  [ViewState.DASHBOARD]: 1,
+  [ViewState.STATS]: 2,
+  [ViewState.SETTINGS]: 2,
+  [ViewState.ADD_RECORD]: 3,
+  [ViewState.SETTINGS_CIRCLES]: 3,
+  [ViewState.SETTINGS_THEME]: 3,
+  [ViewState.SETTINGS_FEEDBACK]: 3,
+};
+
+// 页面转场动画 variants
+const pageVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? '100%' : '-100%',
+    opacity: 0,
+    scale: 0.95,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+    scale: 1,
+  },
+  exit: (direction: number) => ({
+    x: direction < 0 ? '100%' : '-100%',
+    opacity: 0,
+    scale: 0.95,
+  }),
+};
+
+const pageTransition = {
+  type: 'tween',
+  ease: [0.25, 0.1, 0.25, 1], // 自定义缓动曲线
+  duration: 0.3,
+};
 
 const App: React.FC = () => {
   // State
   // Default to LOGIN directly
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<ViewState>(ViewState.LOGIN);
+  const [previousView, setPreviousView] = useState<ViewState | null>(null);
   const [records, setRecords] = useState<Record[]>([]);
   const [circles, setCircles] = useState<Circle[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
@@ -31,6 +70,20 @@ const App: React.FC = () => {
   const [autoStartVoice, setAutoStartVoice] = useState(false);
   // Lifted state for filtering (also used for default selection in AddRecord)
   const [selectedCircleId, setSelectedCircleId] = useState<string>('all');
+
+  // 计算页面切换方向 - 用于转场动画
+  const direction = useMemo(() => {
+    if (!previousView) return 0;
+    const currentLevel = PAGE_LEVEL[view];
+    const previousLevel = PAGE_LEVEL[previousView];
+    return currentLevel - previousLevel;
+  }, [view, previousView]);
+
+  // 包装 setView 以跟踪 previousView
+  const changeView = (newView: ViewState) => {
+    setPreviousView(view);
+    setView(newView);
+  };
 
   // Check Auth on Mount & Listen for Changes
   useEffect(() => {
@@ -43,7 +96,7 @@ const App: React.FC = () => {
         if (mounted) {
           if (currentUser) {
             setUser(currentUser);
-            setView(ViewState.DASHBOARD);
+            changeView(ViewState.DASHBOARD);
           }
         }
       } catch (err) {
@@ -74,7 +127,7 @@ const App: React.FC = () => {
             const currentUser = await authService.getCurrentUser();
             if (mounted && currentUser) {
               setUser(currentUser);
-              setView(ViewState.DASHBOARD);
+              changeView(ViewState.DASHBOARD);
             }
           } catch (e) { /* ignore */ }
         }
@@ -109,7 +162,7 @@ const App: React.FC = () => {
       } else if (event === 'SIGNED_OUT') {
         if (mounted) {
           setUser(null);
-          setView(ViewState.LOGIN);
+          changeView(ViewState.LOGIN);
           setRecords([]);
           setCircles([]);
           setPreferences(DEFAULT_PREFERENCES);
@@ -178,7 +231,7 @@ const App: React.FC = () => {
     // The useEffect [user?.id] dependency prevents duplicate data fetching.
     setIsLoading(true);
     setUser(loggedInUser);
-    setView(ViewState.DASHBOARD);
+    changeView(ViewState.DASHBOARD);
   };
 
   const handleLogout = async () => {
@@ -213,7 +266,7 @@ const App: React.FC = () => {
       updatedRecords.sort((a, b) => b.timestamp - a.timestamp);
 
       setRecords(updatedRecords);
-      setView(ViewState.DASHBOARD);
+      changeView(ViewState.DASHBOARD);
 
       // Persist to DB
       const recordsToAdd: Record[] = [];
@@ -258,7 +311,7 @@ const App: React.FC = () => {
 
   const handleEditRecord = (record: Record) => {
     setEditingRecord(record);
-    setView(ViewState.ADD_RECORD);
+    changeView(ViewState.ADD_RECORD);
   };
 
   const handleUpdateCircles = async (newCircles: Circle[]) => {
@@ -356,7 +409,7 @@ const App: React.FC = () => {
             circles={circles}
             onSave={handleSaveRecord}
             onCancel={() => {
-              setView(ViewState.DASHBOARD);
+              changeView(ViewState.DASHBOARD);
               setEditingRecord(null);
               setAutoStartVoice(false);
             }}
@@ -370,9 +423,9 @@ const App: React.FC = () => {
           <CircleManager
             circles={circles}
             onUpdateCircles={handleUpdateCircles}
-            onNavigate={setView}
+            onNavigate={changeView}
             hasRecords={hasRecordsInCircle}
-            onBack={() => setView(ViewState.SETTINGS)}
+            onBack={() => changeView(ViewState.SETTINGS)}
           />
         );
       case ViewState.SETTINGS_THEME:
@@ -380,13 +433,13 @@ const App: React.FC = () => {
           <ThemeSettings
             preferences={preferences}
             onUpdatePreferences={handleUpdatePreferences}
-            onNavigate={setView}
+            onNavigate={changeView}
           />
         );
       case ViewState.SETTINGS_FEEDBACK:
         return (
           <Feedback
-            onNavigate={setView}
+            onNavigate={changeView}
             userId={user?.id}
           />
         );
@@ -401,7 +454,7 @@ const App: React.FC = () => {
       case ViewState.SETTINGS:
         return (
           <Settings
-            onNavigate={setView}
+            onNavigate={changeView}
             user={user}
             onLogout={handleLogout}
             onClearData={handleClearData}
@@ -416,7 +469,7 @@ const App: React.FC = () => {
             circles={circles}
             onDeleteRecord={handleDeleteRecord}
             onEditRecord={handleEditRecord}
-            onNavigate={setView}
+            onNavigate={changeView}
             themeId={preferences.themeId}
             selectedCircleId={selectedCircleId}
             onSelectCircle={setSelectedCircleId}
@@ -434,7 +487,20 @@ const App: React.FC = () => {
         {isInitializing ? (
           <LoadingScreen isVisible={true} />
         ) : (
-          renderContent()
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={view}
+              custom={direction}
+              variants={pageVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={pageTransition}
+              className="absolute inset-0"
+            >
+              {renderContent()}
+            </motion.div>
+          </AnimatePresence>
         )}
       </div>
 
@@ -448,12 +514,12 @@ const App: React.FC = () => {
               setEditingRecord(null);
               setAutoStartVoice(false);
             }
-            setView(v);
+            changeView(v);
           }}
           onVoiceEntry={() => {
             setEditingRecord(null);
             setAutoStartVoice(true);
-            setView(ViewState.ADD_RECORD);
+            changeView(ViewState.ADD_RECORD);
           }}
         />
       )}
