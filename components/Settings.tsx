@@ -1,7 +1,8 @@
 import React, { useRef } from 'react';
 import { ViewState, User, Record, Circle } from '../types';
-import { Users, ChevronRight, Info, LogOut, UserCircle, Trash2, FileDown, FileUp, MessageSquare, Shield, AlertTriangle, Loader2 } from 'lucide-react';
+import { Users, ChevronRight, Info, LogOut, UserCircle, Trash2, FileDown, FileUp, MessageSquare, Shield, AlertTriangle, Loader2, Crown } from 'lucide-react';
 import { authService } from '../services/authService';
+import ProUpgradeModal from './ProUpgradeModal';
 import { fetchRecords, fetchCircles, addRecordsBatch, syncCircles, generateId } from '../services/storageService';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
@@ -23,6 +24,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
 
   // State
   const [isExporting, setIsExporting] = React.useState(false);
+  const [showProModal, setShowProModal] = React.useState(false);
 
 
   // Theme Logic
@@ -461,6 +463,31 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
           </div>
         </Card>
 
+        {/* Pro Upgrade Banner */}
+        <button
+          onClick={() => setShowProModal(true)}
+          className="w-full relative overflow-hidden group rounded-2xl"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 opacity-90 transition-opacity group-hover:opacity-100" />
+          <div className="relative p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                <Crown className="w-6 h-6 text-white text-shadow-sm" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-white font-bold text-base flex items-center gap-1">
+                  开通 Pro 会员
+                  <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white font-normal backdrop-blur-sm">SALE</span>
+                </h3>
+                <p className="text-amber-100 text-xs">解锁无限语音记账 & 专属标识</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-white/70 group-hover:text-white transition-colors" />
+          </div>
+          {/* Shine effect */}
+          <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent z-10" />
+        </button>
+
         {/* Menu Items */}
         <div className="space-y-2">
           {/* Section Label: Show only in dark mode or make it subtle in light */}
@@ -570,6 +597,11 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
           </div>
         </div>
       </div>
+
+      <ProUpgradeModal
+        isOpen={showProModal}
+        onClose={() => setShowProModal(false)}
+      />
     </div>
   );
 };

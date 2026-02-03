@@ -13,11 +13,18 @@ export interface UseVoiceTrialResult {
 }
 
 export const useVoiceTrial = (): UseVoiceTrialResult => {
-    const [trialUsed, setTrialUsed] = useState<number>(0);
+    const [trialUsed, setTrialUsed] = useState<number>(() => {
+        try {
+            const cached = localStorage.getItem(VOICE_TRIAL_STORAGE_KEY);
+            return cached ? parseInt(cached, 10) : 0;
+        } catch {
+            return 0;
+        }
+    });
     const [isPro, setIsPro] = useState<boolean>(false); // 预留Pro状态
     const [loading, setLoading] = useState<boolean>(true);
 
-    // 从 localStorage 加载缓存
+    // 从 localStorage 加载缓存 (保留此函数用于其他用途，虽然初始已加载)
     const loadFromCache = useCallback((): number => {
         try {
             const cached = localStorage.getItem(VOICE_TRIAL_STORAGE_KEY);

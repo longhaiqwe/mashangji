@@ -19,6 +19,8 @@ import LoadingScreen from './components/LoadingScreen';
 import { supabase } from './services/supabase';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useParticleEffect } from './components/ui/ParticleEffect';
+import { useVoiceTrial } from './hooks/useVoiceTrial';
+import TrialExhaustedModal from './components/TrialExhaustedModal';
 
 // 页面层级定义 - 用于决定转场动画方向
 const PAGE_LEVEL: { [key in ViewState]: number } = {
@@ -72,6 +74,10 @@ const App: React.FC = () => {
   const [autoStartVoice, setAutoStartVoice] = useState(false);
   // Lifted state for filtering (also used for default selection in AddRecord)
   const [selectedCircleId, setSelectedCircleId] = useState<string>('all');
+  const [showTrialExhausted, setShowTrialExhausted] = useState(false);
+
+  // Voice Trial Hook
+  const { canUseVoice } = useVoiceTrial();
 
   // 粒子特效系统
   const particleEffect = useParticleEffect();
@@ -544,9 +550,13 @@ const App: React.FC = () => {
             changeView(v);
           }}
           onVoiceEntry={() => {
-            setEditingRecord(null);
-            setAutoStartVoice(true);
-            changeView(ViewState.ADD_RECORD);
+            if (canUseVoice) {
+              setEditingRecord(null);
+              setAutoStartVoice(true);
+              changeView(ViewState.ADD_RECORD);
+            } else {
+              setShowTrialExhausted(true);
+            }
           }}
         />
       )}
@@ -554,6 +564,16 @@ const App: React.FC = () => {
 
       {/* 粒子特效 */}
       <particleEffect.Component />
+
+      {/* Trial Exhausted Prompt (Global) */}
+      <TrialExhaustedModal
+        isOpen={showTrialExhausted}
+        onClose={() => {
+          setShowTrialExhausted(false);
+          // Return to dashboard when closing the prompt
+          changeView(ViewState.DASHBOARD);
+        }}
+      />
     </div>
   );
 };

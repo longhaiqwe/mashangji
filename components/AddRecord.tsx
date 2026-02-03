@@ -88,11 +88,16 @@ const AddRecord: React.FC<AddRecordProps> = ({
   // Sync prop to state to handle re-navigation/long-press when component is already mounted
   useEffect(() => {
     if (initialAutoStartVoice) {
-      setImportMode('voice');
-      setAutoStartVoice(true);
-      setShowImportModal(true);
+      // 这里的 canUseVoice 基于 localStorage 同步初始化，可以直接使用
+      if (!canUseVoice) {
+        setShowTrialExhausted(true);
+      } else {
+        setImportMode('voice');
+        setAutoStartVoice(true);
+        setShowImportModal(true);
+      }
     }
-  }, [initialAutoStartVoice]);
+  }, [initialAutoStartVoice, canUseVoice]);
 
   const silenceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const amountInputRef = React.useRef<HTMLInputElement>(null);

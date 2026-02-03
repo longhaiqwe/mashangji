@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Crown, Mic, X, Sparkles } from 'lucide-react';
+import ProUpgradeModal from './ProUpgradeModal';
 
 interface TrialExhaustedModalProps {
     isOpen: boolean;
@@ -13,9 +14,10 @@ const TrialExhaustedModal: React.FC<TrialExhaustedModalProps> = ({
     onClose,
     onUpgrade,
 }) => {
+    const [showProModal, setShowProModal] = useState(false);
+
     const handleUpgrade = () => {
-        // 暂时只显示提示，后续实现IAP
-        alert('Pro 订阅功能开发中，敬请期待！');
+        setShowProModal(true);
         onUpgrade?.();
     };
 
@@ -91,6 +93,12 @@ const TrialExhaustedModal: React.FC<TrialExhaustedModalProps> = ({
                     </motion.div>
                 </motion.div>
             )}
+
+            {/* Pro Upgrade Page */}
+            <ProUpgradeModal
+                isOpen={showProModal}
+                onClose={() => setShowProModal(false)}
+            />
         </AnimatePresence>
     );
 };
