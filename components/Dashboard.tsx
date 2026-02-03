@@ -188,8 +188,8 @@ const Dashboard: React.FC<DashboardProps> = ({
               >
                 <motion.div
                   className={`p-4 rounded-2xl transition-all active:scale-[0.98] ${isDarkTheme
-                      ? 'bg-dark-bg-secondary border border-dark-border/20'
-                      : 'bg-white border border-slate-100'
+                    ? 'bg-dark-bg-secondary border border-dark-border/20'
+                    : 'bg-white border border-slate-100'
                     }`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}

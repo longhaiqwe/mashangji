@@ -1,12 +1,12 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo, AnimatePresence } from 'framer-motion';
 import { Trash2, Edit2 } from 'lucide-react';
 
 export interface SwipeAction {
     label: string;
     icon: React.ReactNode;
-    color: string; // Tailwinc bg color class, e.g. 'bg-red-500'
+    color: string; // Tailwind bg color class, e.g. 'bg-red-500'
     onClick: () => void;
 }
 
@@ -21,12 +21,21 @@ const SwipeableItem: React.FC<SwipeableItemProps> = ({
     children,
     actions,
     className = '',
-    threshold = 80
+    threshold = 50  // 降低阈值，让慢速滑动也能触发
 }) => {
     const x = useMotionValue(0);
     const containerRef = useRef<HTMLDivElement>(null);
     const [isOpen, setIsOpen] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [xValue, setXValue] = useState(0);
+
+    // 监听 x 值变化
+    useEffect(() => {
+        const unsubscribe = x.on('change', (latest) => {
+            setXValue(latest);
+        });
+        return () => unsubscribe();
+    }, [x]);
 
     // Calculate the total width of actions to know how far to snap
     const actionButtonWidth = 70;
@@ -45,7 +54,8 @@ const SwipeableItem: React.FC<SwipeableItemProps> = ({
         const velocity = info.velocity.x;
 
         // Logic to determine if we should snap open or close
-        if (offset < -threshold || velocity < -500) {
+        // 降低速度阈值，让慢速滑动也能触发
+        if (offset < -threshold || velocity < -300) {
             // Swiped left enough
             setIsOpen(true);
         } else {
@@ -54,8 +64,9 @@ const SwipeableItem: React.FC<SwipeableItemProps> = ({
         }
     };
 
-    // 只有在拖动中或打开状态下才显示按钮
-    const showActions = isDragging || isOpen;
+    // 只要 x 位置偏移超过 10px，或者正在拖动，或者已打开，就显示按钮
+    // 这样即使松手后动画回弹过程中，按钮也会保持显示
+    const showActions = isDragging || isOpen || xValue < -10;
 
     return (
         <div className={`relative overflow-hidden ${className}`} ref={containerRef}>
