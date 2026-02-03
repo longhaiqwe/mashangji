@@ -434,6 +434,7 @@ const App: React.FC = () => {
             initialCircleId={selectedCircleId === 'all' ? undefined : selectedCircleId}
             initialRecord={editingRecord}
             initialAutoStartVoice={autoStartVoice}
+            themeId={preferences.themeId}
           />
         );
       case ViewState.SETTINGS_CIRCLES:

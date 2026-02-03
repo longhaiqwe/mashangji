@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Circle, Record } from '../types';
 import { ChevronLeft, Calendar, FileText, Check, Users, Sparkles, X, Loader2, Trash2, RefreshCw, Mic, MicOff } from 'lucide-react';
 import { generateId } from '../services/storageService';
@@ -16,9 +17,30 @@ interface AddRecordProps {
   initialCircleId?: string;
   initialRecord?: Record | null; // For editing
   initialAutoStartVoice?: boolean;
+  themeId?: string;
 }
 
-const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initialCircleId, initialRecord, initialAutoStartVoice = false }) => {
+const AddRecord: React.FC<AddRecordProps> = ({
+  circles,
+  onSave,
+  onCancel,
+  initialCircleId,
+  initialRecord,
+  initialAutoStartVoice = false,
+  themeId = 'default'
+}) => {
+
+  // 判断是否为深色主题
+  const isDarkTheme = themeId === 'black' || themeId === 'rich';
+
+  // 根据主题设置颜色
+  const bgClass = isDarkTheme ? 'bg-dark-bg-primary' : 'bg-light-bg-primary';
+  const textPrimary = isDarkTheme ? 'text-white' : 'text-dark-bg-primary';
+  const textSecondary = isDarkTheme ? 'text-text-secondary' : 'text-slate-500';
+  const bgSecondary = isDarkTheme ? 'bg-dark-bg-secondary' : 'bg-white';
+  const borderClass = isDarkTheme ? 'border-dark-border/20' : 'border-slate-200';
+  const inputBg = isDarkTheme ? 'bg-dark-bg-secondary' : 'bg-slate-50';
+
   const [amount, setAmount] = useState<string>('');
   const [isWin, setIsWin] = useState<boolean>(true);
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -583,318 +605,451 @@ const AddRecord: React.FC<AddRecordProps> = ({ circles, onSave, onCancel, initia
 
   return (
     <div
-      className="flex flex-col h-full bg-white transition-transform duration-200"
+      className={`flex flex-col h-full ${bgClass} transition-transform duration-200`}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
       {/* Header */}
-      <div className="flex items-center px-4 h-14 border-b border-gray-100 flex-shrink-0">
-        <button onClick={onCancel} className="p-2 -ml-2 text-gray-500">
+      <motion.div
+        className={`flex items-center px-4 h-16 border-b ${borderClass} flex-shrink-0`}
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <button onClick={onCancel} className={`p-2 -ml-2 ${textSecondary} hover:text-luxury-gold-500 transition-colors`}>
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <h2 className="flex-1 text-center font-bold text-lg text-gray-800">
+        <h2 className={`flex-1 text-center font-bold text-lg ${textPrimary}`}>
           {initialRecord ? '编辑记录' : '记一笔'}
         </h2>
-        <button onClick={() => {
-          setImportMode('batch');
-          setShowImportModal(true);
-        }} className="p-2 -mr-2 text-indigo-600 flex items-center space-x-1">
+        <motion.button
+          onClick={() => {
+            setImportMode('batch');
+            setShowImportModal(true);
+          }}
+          className="p-2 -mr-2 text-luxury-gold-500 flex items-center space-x-1"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
           <span className="text-sm font-bold">批量导入</span>
           <Sparkles className="w-5 h-5" />
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col p-6 space-y-6 overflow-y-auto">
 
         {/* Compact Layout */}
-        <div className="flex flex-col space-y-6">
+        <motion.div
+          className="flex flex-col space-y-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+        >
 
           {/* Row 1: Circle & Date (Secondary Info) */}
           <div className="flex items-center space-x-4">
             {/* Circle Selector - Compact */}
             <div className="flex-1 min-w-0">
-              <label className="text-xs text-gray-400 mb-1 block pl-1">圈子</label>
+              <label className={`text-xs ${textSecondary} mb-2 block pl-1 uppercase tracking-wider`}>圈子</label>
               <div className="flex overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 space-x-2">
-                {circles.map(c => (
-                  <button
+                {circles.map((c, index) => (
+                  <motion.button
                     key={c.id}
                     type="button"
                     onClick={() => setCircleId(c.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap border transition-all ${circleId === c.id ? 'bg-primary-50 border-primary-500 text-primary-700 font-bold' : 'bg-white border-gray-200 text-gray-600'}`}
+                    className={`px-4 py-2 rounded-xl text-xs whitespace-nowrap border transition-all font-medium ${circleId === c.id
+                      ? 'bg-luxury-gold-500/20 border-luxury-gold-500 text-luxury-gold-500 shadow-[0_0_20px_rgba(212,175,55,0.3)]'
+                      : `${inputBg} ${borderClass} ${textSecondary} hover:border-luxury-gold-500/30`
+                      }`}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1 + index * 0.05 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     {c.name}
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             </div>
 
             {/* Date Picker - Compact */}
             <div className="flex-none">
-              <label className="text-xs text-gray-400 mb-1 block pl-1">日期</label>
-              <input
+              <label className={`text-xs ${textSecondary} mb-2 block pl-1 uppercase tracking-wider`}>日期</label>
+              <motion.input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="py-1.5 px-3 bg-gray-50 rounded-lg border border-gray-200 text-xs text-center font-medium outline-none focus:ring-1 focus:ring-mahjong-500/20"
+                className={`py-2 px-4 ${inputBg} rounded-xl ${borderClass} text-xs text-center font-medium outline-none focus:border-luxury-gold-500/50 focus:shadow-[0_0_20px_rgba(212,175,55,0.2)] transition-all ${textPrimary}`}
+                whileFocus={{ scale: 1.02 }}
               />
             </div>
           </div>
 
           {/* Row 2: Win/Loss & Amount (Primary Input) */}
-          <div className="flex items-stretch space-x-3">
+          <motion.div
+            className="flex items-stretch space-x-3"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
             {/* Win/Loss Switch - Pill Shape */}
-            <div className="flex flex-col flex-none justify-center bg-gray-100 rounded-2xl p-1 w-20">
-              <button
+            <div className={`flex flex-col flex-none justify-center ${inputBg} rounded-2xl p-1.5 w-24 border ${borderClass}`}>
+              <motion.button
                 type="button"
                 onClick={() => setIsWin(true)}
-                className={`flex-1 py-1 text-sm font-bold rounded-xl transition-all mb-1 ${isWin ? 'bg-white text-win shadow-sm' : 'text-gray-400'}`}
+                className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all mb-1 ${isWin
+                  ? 'bg-win-crimson text-white shadow-[0_0_20px_rgba(220,20,60,0.4)]'
+                  : `${textSecondary} hover:text-win-crimson/70`
+                  }`}
+                whileHover={{ scale: isWin ? 1 : 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 赢
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 type="button"
                 onClick={() => setIsWin(false)}
-                className={`flex-1 py-1 text-sm font-bold rounded-xl transition-all ${!isWin ? 'bg-white text-loss shadow-sm' : 'text-gray-400'}`}
+                className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all ${!isWin
+                  ? 'bg-loss-emerald text-white shadow-[0_0_20px_rgba(0,200,83,0.4)]'
+                  : `${textSecondary} hover:text-loss-emerald/70`
+                  }`}
+                whileHover={{ scale: !isWin ? 1 : 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
                 输
-              </button>
+              </motion.button>
             </div>
 
             {/* Amount Input - Prominent */}
-            <div className="flex-1 relative">
-              <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold ${isWin ? 'text-win' : 'text-loss'}`}>¥</span>
-              <input
+            <div className="flex-1 relative group">
+              <span
+                className={`absolute left-5 top-1/2 -translate-y-1/2 text-3xl font-bold font-mono-numeric transition-colors ${isWin ? 'text-win-crimson drop-shadow-[0_0_15px_rgba(220,20,60,0.5)]' : 'text-loss-emerald drop-shadow-[0_0_15px_rgba(0,200,83,0.5)]'
+                  }`}
+              >
+                ¥
+              </span>
+              <motion.input
                 type="text"
                 inputMode="decimal"
                 placeholder="0.00"
                 value={amount}
                 onChange={handleAmountChange}
-                className={`w-full h-full text-right pr-4 py-2 pl-10 bg-gray-50 rounded-2xl text-4xl font-bold outline-none border-2 transition-colors ${error ? 'border-red-300' : 'border-transparent focus:border-primary-500'} ${isWin ? 'text-win' : 'text-loss'}`}
+                className={`w-full h-full text-right pr-5 py-4 pl-14 ${inputBg} rounded-2xl text-5xl font-bold outline-none border-2 transition-all font-mono-numeric ${error
+                  ? 'border-rose-500/50 text-rose-500'
+                  : `${borderClass} focus:${isWin ? 'border-win-crimson' : 'border-loss-emerald'}/50 focus:shadow-[0_0_30px_rgba(${isWin ? '220,20,60' : '0,200,83'},0.2)] ${isWin ? 'text-win-crimson' : 'text-loss-emerald'}`
+                  } ${textPrimary} placeholder:text-slate-300`}
                 autoFocus={!initialRecord}
+                whileFocus={{ scale: 1.01 }}
               />
             </div>
-          </div>
+          </motion.div>
 
           {/* Row 3: Note */}
-          <div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
             <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <FileText className="w-4 h-4" />
+              <div className={`absolute left-4 top-1/2 -translate-y-1/2 ${textSecondary}`}>
+                <FileText className="w-5 h-5" />
               </div>
-              <input
+              <motion.input
                 type="text"
                 placeholder="备注 (选填)"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 maxLength={20}
-                className="w-full py-3.5 pl-9 pr-10 bg-gray-50 rounded-xl border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-primary-500/20"
+                className={`w-full py-4 pl-12 pr-12 ${inputBg} rounded-xl ${borderClass} text-sm outline-none focus:border-luxury-gold-500/50 focus:shadow-[0_0_20px_rgba(212,175,55,0.15)] transition-all ${textPrimary} placeholder:text-slate-400`}
+                whileFocus={{ scale: 1.01 }}
               />
-              <button
+              <motion.button
                 type="button"
                 onClick={() => {
                   setImportMode('voice');
                   setShowImportModal(true);
                   toggleListening();
                 }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full ${textSecondary} hover:text-luxury-gold-500 hover:bg-luxury-gold-500/10 transition-colors`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
               >
-                <Mic size={18} />
-              </button>
+                <Mic size={20} />
+              </motion.button>
             </div>
-          </div>
+          </motion.div>
 
-        </div>
+        </motion.div>
 
         {/* Spacer to push content up if needed, though flex-col space-y handles it */}
         <div className="flex-1"></div>
+
+        {/* Fixed Footer with Submit Button */}
+        <motion.div
+          className={`flex-none p-4 border-t ${borderClass} ${bgClass} z-10 safe-area-bottom`}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <motion.button
+            onClick={(e) => handleSubmit(e as any)}
+            className={`w-full font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center transition-all ${isWin
+              ? 'bg-win-crimson text-white shadow-[0_0_30px_rgba(220,20,60,0.4)] hover:shadow-[0_0_40px_rgba(220,20,60,0.5)]'
+              : 'bg-loss-emerald text-white shadow-[0_0_30px_rgba(0,200,83,0.4)] hover:shadow-[0_0_40px_rgba(0,200,83,0.5)]'
+              }`}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Check className="w-5 h-5 mr-2" /> {initialRecord ? '更新记录' : '保存'}
+          </motion.button>
+        </motion.div>
       </form>
 
-      {/* Fixed Footer with Submit Button */}
-      <div className="flex-none p-4 border-t border-gray-100 bg-white z-10 safe-area-bottom">
-        <button
-          onClick={(e) => handleSubmit(e as any)}
-          className="w-full bg-primary-600 hover:bg-primary-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary-500/30 active:scale-[0.98] transition-all flex items-center justify-center"
-        >
-          <Check className="w-5 h-5 mr-2" /> {initialRecord ? '更新记录' : '保存'}
-        </button>
-      </div>
-
       {/* Import Modal */}
-      {showImportModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-sm rounded-2xl p-6 flex flex-col space-y-4 shadow-2xl">
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold text-lg text-gray-800 flex items-center">
-                <Sparkles className="w-5 h-5 mr-2 text-indigo-500" />
-                {importMode === 'voice' ? '语音记账' : '批量导入'}
-              </h3>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={handleReAnalyze}
-                  disabled={isAnalyzing}
-                  className={`p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-indigo-600 transition-colors ${isAnalyzing ? 'animate-spin' : ''}`}
-                  title="重新识别"
-                >
-                  <RefreshCw size={20} />
-                </button>
-                <button onClick={handleUserCloseModal} className="text-gray-400 hover:text-gray-600">
-                  <X size={24} />
-                </button>
+      <AnimatePresence>
+        {showImportModal && (
+          <motion.div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              className={`${bgSecondary} w-full max-w-sm rounded-3xl p-6 flex flex-col space-y-4 shadow-2xl ${borderClass}`}
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
+            >
+              <div className="flex justify-between items-center">
+                <h3 className={`font-bold text-lg ${textPrimary} flex items-center`}>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  >
+                    <Sparkles className="w-5 h-5 mr-2 text-luxury-gold-500" />
+                  </motion.div>
+                  {importMode === 'voice' ? '语音记账' : '批量导入'}
+                </h3>
+                <div className="flex items-center space-x-2">
+                  <motion.button
+                    onClick={handleReAnalyze}
+                    disabled={isAnalyzing}
+                    className={`p-2 rounded-full hover:bg-luxury-gold-500/10 ${textSecondary} hover:text-luxury-gold-500 transition-colors ${isAnalyzing ? 'animate-spin' : ''
+                      }`}
+                    title="重新识别"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <RefreshCw size={20} />
+                  </motion.button>
+                  <motion.button
+                    onClick={handleUserCloseModal}
+                    className={`${textSecondary} hover:${textPrimary} transition-colors`}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <X size={24} />
+                  </motion.button>
+                </div>
               </div>
-            </div>
 
-            {parsedResults.length > 0 ? (
-              <div className="flex-1 overflow-y-auto min-h-[200px] max-h-[400px] space-y-3">
-                <p className="text-sm text-green-600 font-bold">成功识别 {parsedResults.length} 条记录：</p>
-                {parsedResults.map((res, idx) => (
-                  <div key={idx} className="bg-gray-50 p-3 rounded-lg border border-gray-100 relative group">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`font-bold ${res.isWin ? 'text-win' : 'text-loss'}`}>
-                            {res.isWin ? '+' : '-'}{res.amount}
-                          </span>
-                          <span className="text-xs text-gray-400">{res.date}</span>
-                          {res.circleName && (
-                            <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100">
-                              {res.circleName}
+              {parsedResults.length > 0 ? (
+                <div className="flex-1 overflow-y-auto min-h-[200px] max-h-[400px] space-y-3">
+                  <motion.p
+                    className="text-sm text-loss-emerald font-bold"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    成功识别 {parsedResults.length} 条记录：
+                  </motion.p>
+                  {parsedResults.map((res, idx) => (
+                    <motion.div
+                      key={idx}
+                      className={`${inputBg} p-4 rounded-xl ${borderClass} relative group`}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <span className={`font-bold font-mono-numeric ${res.isWin ? 'text-win-crimson drop-shadow-[0_0_10px_rgba(220,20,60,0.3)]' : 'text-loss-emerald drop-shadow-[0_0_10px_rgba(0,200,83,0.3)]'
+                              }`}>
+                              {res.isWin ? '+' : '-'}{res.amount}
                             </span>
-                          )}
+                            <span className={`text-xs ${textSecondary}`}>{res.date}</span>
+                            {res.circleName && (
+                              <span className="text-[10px] bg-luxury-gold-500/10 text-luxury-gold-500 px-2 py-0.5 rounded border border-luxury-gold-500/20">
+                                {res.circleName}
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-xs ${textSecondary} mt-1`}>{res.note || '无备注'}</p>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">{res.note || '无备注'}</p>
+                        <motion.button
+                          onClick={() => removeParsedResult(idx)}
+                          className={`${textSecondary} hover:text-rose-500 p-1 transition-colors`}
+                          whileHover={{ scale: 1.2 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <Trash2 size={16} />
+                        </motion.button>
                       </div>
-                      <button
-                        onClick={() => removeParsedResult(idx)}
-                        className="text-gray-400 hover:text-red-500 p-1"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2 flex-1 flex flex-col">
-                <label className="text-sm text-gray-500 block">
-                  {importMode === 'voice' ? '语音输入' : '粘贴文本'}
-                  <span className="text-xs text-gray-400 ml-2">(支持时间、金额、输赢、圈子)</span>
-                </label>
-                <div className="relative flex-1">
-                  {importMode === 'batch' ? (
-                    <textarea
-                      className="w-full h-full min-h-[120px] p-3 bg-gray-50 rounded-xl border border-gray-200 resize-none text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                      placeholder="请粘贴多条记录，例如：
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3 flex-1 flex flex-col">
+                  <label className={`text-sm ${textSecondary} block`}>
+                    {importMode === 'voice' ? '语音输入' : '粘贴文本'}
+                    <span className={`text-xs ${textSecondary}/80 ml-2`}>(支持时间、金额、输赢、圈子)</span>
+                  </label>
+                  <div className="relative flex-1">
+                    {importMode === 'batch' ? (
+                      <textarea
+                        className={`w-full h-full min-h-[120px] p-4 ${inputBg} rounded-xl ${borderClass} resize-none text-sm focus:border-luxury-gold-500/50 focus:shadow-[0_0_20px_rgba(212,175,55,0.15)] outline-none transition-all ${textPrimary} placeholder:text-slate-400`}
+                        placeholder="请粘贴多条记录，例如：
 '昨天在雀神会打麻将赢了200'
 '周五和朋友斗地主输了50'"
-                      value={importText}
-                      onChange={(e) => {
-                        setImportText(e.target.value);
-                        setFeedback(null); // Clear feedback on user input
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full min-h-[120px] bg-indigo-50/50 rounded-xl border border-indigo-100 flex flex-col items-center justify-center relative overflow-hidden">
-                      {tempTranscript || importText ? (
-                        <div className="w-full h-full p-4 overflow-y-auto text-center text-lg font-medium text-gray-700 flex items-center justify-center">
-                          "{tempTranscript || importText}"
-                        </div>
-                      ) : (
-                        <div className="text-center space-y-2">
-                          <p className="text-indigo-600 font-medium">
-                            {isListening ? '正在聆听...' : '点击下方按钮开始说话'}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Voice Wave Animation when listening */}
-                      {isListening && (
-                        <div className="absolute inset-0 pointer-events-none opacity-10">
-                          <div className="absolute inset-0 flex items-center justify-center space-x-1">
-                            {[...Array(5)].map((_, i) => (
-                              <div key={i} className="w-2 bg-indigo-600 rounded-full animate-bounce" style={{ height: '40%', animationDelay: `${i * 0.1}s` }}></div>
-                            ))}
+                        value={importText}
+                        onChange={(e) => {
+                          setImportText(e.target.value);
+                          setFeedback(null); // Clear feedback on user input
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full min-h-[120px] bg-luxury-gold-500/5 rounded-xl border border-luxury-gold-500/20 flex flex-col items-center justify-center relative overflow-hidden">
+                        {tempTranscript || importText ? (
+                          <div className={`w-full h-full p-4 overflow-y-auto text-center text-lg font-medium ${textPrimary} flex items-center justify-center`}>
+                            "{tempTranscript || importText}"
                           </div>
-                        </div>
-                      )}
+                        ) : (
+                          <div className="text-center space-y-2">
+                            <p className="text-luxury-gold-500 font-medium">
+                              {isListening ? '正在聆听...' : '点击下方按钮开始说话'}
+                            </p>
+                          </div>
+                        )}
 
-                      {/* Voice Input Button Centered */}
-                      <button
-                        type="button"
-                        onClick={toggleListening}
-                        className={`mt-4 p-4 rounded-full shadow-xl transition-all ${isListening
-                          ? 'bg-red-500 text-white animate-pulse scale-110 shadow-red-500/30'
-                          : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105 shadow-indigo-500/30'
-                          }`}
-                        title={isListening ? "停止录音" : "开始语音输入"}
-                      >
-                        {isListening ? <MicOff size={32} /> : <Mic size={32} />}
-                      </button>
-                    </div>
-                  )}
-                </div>
+                        {/* Voice Wave Animation when listening */}
+                        {isListening && (
+                          <div className="absolute inset-0 pointer-events-none opacity-20">
+                            <div className="absolute inset-0 flex items-center justify-center space-x-1">
+                              {[...Array(5)].map((_, i) => (
+                                <motion.div
+                                  key={i}
+                                  className="w-2 bg-luxury-gold-500 rounded-full"
+                                  animate={{ scaleY: [0.5, 1.5, 0.5] }}
+                                  transition={{
+                                    duration: 0.8,
+                                    repeat: Infinity,
+                                    delay: i * 0.1,
+                                    ease: "easeInOut"
+                                  }}
+                                  style={{ height: '40%' }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
-                {/* Feedback Message */}
-                {feedback && !isListening && (
-                  <div className={`text-sm text-center p-2 rounded-lg animate-in fade-in slide-in-from-top-1 ${feedback.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
-                    {feedback.message}
-                  </div>
-                )}
-
-                {isListening && (
-                  <p className="text-xs text-center text-indigo-600 font-medium animate-pulse">
-                    正在聆听... (说完后请再次点击按钮停止)
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              {parsedResults.length > 0 && (
-                <button
-                  onClick={() => {
-                    setParsedResults([]);
-                    setImportText('');
-                  }}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 py-3 rounded-xl font-bold transition-all"
-                >
-                  重置
-                </button>
-              )}
-
-              <button
-                onClick={parsedResults.length > 0 ? handleBatchImport : () => handleAnalyze()}
-                disabled={isAnalyzing}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-bold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/30"
-              >
-                {isAnalyzing ? (
-                  <div className="flex flex-col items-center">
-                    <div className="flex items-center">
-                      <Loader2 className="animate-spin mr-2 w-5 h-5" />
-                      AI 分析中...
-                    </div>
-                    {importMode === 'batch' && (
-                      <span className="text-[10px] font-normal opacity-80 mt-1">
-                        批量分析可能需要 1 分钟左右，请耐心等待...
-                      </span>
+                        {/* Voice Input Button Centered */}
+                        <motion.button
+                          type="button"
+                          onClick={toggleListening}
+                          className={`mt-4 p-4 rounded-full shadow-xl transition-all ${isListening
+                            ? 'bg-rose-500 text-white animate-pulse scale-110 shadow-[0_0_30px_rgba(244,63,94,0.4)]'
+                            : 'bg-luxury-gold-500 text-dark-bg-primary hover:bg-luxury-gold-400 shadow-[0_0_30px_rgba(212,175,55,0.3)]'
+                            }`}
+                          title={isListening ? "停止录音" : "开始语音输入"}
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          {isListening ? <MicOff size={32} /> : <Mic size={32} />}
+                        </motion.button>
+                      </div>
                     )}
                   </div>
-                ) : parsedResults.length > 0 ? (
-                  <>
-                    <Check className="mr-2 w-5 h-5" />
-                    全部导入
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 w-5 h-5" />
-                    开始识别
-                  </>
+
+                  {/* Feedback Message */}
+                  {feedback && !isListening && (
+                    <motion.div
+                      className={`text-sm text-center p-3 rounded-xl ${feedback.type === 'error' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-luxury-gold-500/10 text-luxury-gold-500 border border-luxury-gold-500/20'
+                        }`}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      {feedback.message}
+                    </motion.div>
+                  )}
+
+                  {isListening && (
+                    <motion.p
+                      className="text-xs text-center text-luxury-gold-500 font-medium"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      正在聆听... (说完后请再次点击按钮停止)
+                    </motion.p>
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                {parsedResults.length > 0 && (
+                  <motion.button
+                    onClick={() => {
+                      setParsedResults([]);
+                      setImportText('');
+                    }}
+                    className={`flex-1 ${inputBg} hover:opacity-80 ${textSecondary} py-3 rounded-xl font-bold transition-all ${borderClass}`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    重置
+                  </motion.button>
                 )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
+                <motion.button
+                  onClick={parsedResults.length > 0 ? handleBatchImport : () => handleAnalyze()}
+                  disabled={isAnalyzing}
+                  className="flex-1 bg-gold-gradient text-dark-bg-primary py-3 rounded-xl font-bold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-gold-glow hover:shadow-gold-ghover"
+                  whileHover={{ scale: isAnalyzing ? 1 : 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {isAnalyzing ? (
+                    <div className="flex flex-col items-center">
+                      <div className="flex items-center">
+                        <Loader2 className="animate-spin mr-2 w-5 h-5" />
+                        AI 分析中...
+                      </div>
+                      {importMode === 'batch' && (
+                        <span className="text-[10px] font-normal opacity-80 mt-1">
+                          批量分析可能需要 1 分钟左右，请耐心等待...
+                        </span>
+                      )}
+                    </div>
+                  ) : parsedResults.length > 0 ? (
+                    <>
+                      <Check className="mr-2 w-5 h-5" />
+                      全部导入
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 w-5 h-5" />
+                      开始识别
+                    </>
+                  )}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
