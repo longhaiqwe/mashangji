@@ -675,6 +675,38 @@ const AddRecord: React.FC<AddRecordProps> = ({
         </motion.button>
       </motion.div>
 
+      {/* 语音记账入口提示 - 仅在非编辑模式下显示 */}
+      {!initialRecord && (
+        <motion.div
+          className={`mx-4 mt-3 px-4 py-3 rounded-xl flex items-center justify-between cursor-pointer ${isDarkTheme ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200'}`}
+          onClick={() => {
+            setImportMode('voice');
+            setAutoStartVoice(true);
+            setShowImportModal(true);
+          }}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
+        >
+          <div className="flex items-center space-x-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isDarkTheme ? 'bg-amber-500/20' : 'bg-amber-100'}`}>
+              <Mic className="w-4 h-4 text-amber-600" />
+            </div>
+            <div>
+              <p className={`text-sm font-medium ${isDarkTheme ? 'text-amber-400' : 'text-amber-700'}`}>
+                🎤 试试 AI 语音记账
+              </p>
+              <p className={`text-xs ${isDarkTheme ? 'text-amber-500/70' : 'text-amber-600/70'}`}>
+                直接说出战绩，或在首页长按 ➕ 按钮进入
+              </p>
+            </div>
+          </div>
+          <ChevronLeft className={`w-5 h-5 rotate-180 ${isDarkTheme ? 'text-amber-500/50' : 'text-amber-400'}`} />
+        </motion.div>
+      )}
+
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col p-4 space-y-4 overflow-y-auto">
 
         {/* Compact Layout */}
