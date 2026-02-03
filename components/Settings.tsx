@@ -45,8 +45,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
   const backupItemIconBg = isDarkTheme ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-100 text-blue-600';
 
   const handleLogout = () => {
-    // Simply clear storage and trigger UI update
-    authService.logout();
+    // Delegate to parent - App.tsx handles auth logout
     onLogout();
   };
 
@@ -457,7 +456,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
                   退出
                 </Button>
               </div>
-              <p className={`text-xs ${textSecondary}`}>已登录终端</p>
+              <p className={`text-xs ${textSecondary}`}>已登录</p>
             </div>
           </div>
         </Card>

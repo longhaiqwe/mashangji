@@ -238,8 +238,17 @@ const App: React.FC = () => {
     changeView(ViewState.DASHBOARD);
   };
 
-  const handleLogout = async () => {
-    await authService.logout();
+  const handleLogout = () => {
+    // Fire-and-forget: Don't wait for server signOut to complete
+    // This ensures instant UI response. Server token revocation happens in background.
+    authService.logout();
+
+    // Immediately clear local state for fast UI transition
+    setUser(null);
+    changeView(ViewState.LOGIN);
+    setRecords([]);
+    setCircles([]);
+    setPreferences(DEFAULT_PREFERENCES);
   };
 
   // Data Handlers
