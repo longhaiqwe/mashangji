@@ -6,6 +6,8 @@ import { fetchRecords, fetchCircles, addRecordsBatch, syncCircles, generateId } 
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
 
 interface SettingsProps {
   onNavigate: (view: ViewState) => void;
@@ -13,10 +15,30 @@ interface SettingsProps {
   onLogout: () => void;
   onClearData?: () => void;
   onDataRefresh?: (silent?: boolean) => void;
+  themeId?: string;
 }
 
-const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClearData, onDataRefresh }) => {
+const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClearData, onDataRefresh, themeId = 'default' }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Theme Logic
+  const isDarkTheme = themeId === 'black' || themeId === 'rich';
+
+  // Dynamic Styles
+  const bgClass = isDarkTheme ? 'bg-dark-bg' : 'bg-slate-50';
+  const textPrimary = isDarkTheme ? 'text-white' : 'text-slate-800';
+  const textSecondary = isDarkTheme ? 'text-gray-400' : 'text-slate-500';
+  const headerBg = isDarkTheme ? 'bg-dark-bg-secondary/50 border-luxury-gold-500/10' : 'bg-white/80 border-slate-200';
+  const cardVariant = isDarkTheme ? 'glass' : 'light';
+  const menuCardVariant = isDarkTheme ? 'default' : 'light';
+
+  // Icon Containers
+  const userIconBg = isDarkTheme ? 'bg-luxury-gold-500/10 border-luxury-gold-500/30' : 'bg-orange-100 border-orange-200';
+  const userIconColor = isDarkTheme ? 'text-luxury-gold-500' : 'text-orange-500';
+
+  const menuItemHover = isDarkTheme ? 'hover:bg-white/5' : 'hover:bg-slate-50';
+  const menuItemIconBg = isDarkTheme ? 'bg-luxury-gold-500/10 text-luxury-gold-500' : 'bg-slate-100 text-slate-600';
+  const backupItemIconBg = isDarkTheme ? 'bg-blue-500/10 text-blue-400' : 'bg-blue-100 text-blue-600';
 
   const handleLogout = () => {
     // Simply clear storage and trigger UI update
@@ -343,7 +365,6 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
       onClick: () => onNavigate(ViewState.SETTINGS_CIRCLES),
       desc: '添加或删除打牌圈子'
     },
-
     {
       id: 'feedback',
       label: '意见反馈',
@@ -386,7 +407,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
   };
 
   return (
-    <div className="flex flex-col h-full bg-white/50">
+    <div className={`flex flex-col h-full ${bgClass} ${textPrimary}`}>
       <input
         type="file"
         ref={fileInputRef}
@@ -395,117 +416,141 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
         className="hidden"
       />
 
-      <div className="bg-white/80 backdrop-blur-sm px-4 h-14 flex items-center justify-center border-b border-gray-200 shadow-sm sticky top-0 z-10">
-        <h2 className="text-lg font-bold text-gray-800">设置</h2>
+      {/* Header */}
+      <div className={`${headerBg} backdrop-blur-md px-4 h-14 flex items-center justify-center border-b sticky top-0 z-10 transition-colors`}>
+        <h2 className={`text-lg font-bold ${isDarkTheme ? 'text-transparent bg-clip-text bg-gold-gradient' : 'text-slate-800'}`}>
+          系统设置
+        </h2>
       </div>
 
-      <div className="p-4 space-y-4 overflow-y-auto">
+      <div className="p-4 space-y-6 overflow-y-auto">
         {/* User Profile Card */}
-        <div className="bg-white/80 backdrop-blur-md rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-mahjong-100 rounded-full flex items-center justify-center text-mahjong-600">
-              <UserCircle className="w-8 h-8" />
+        <Card variant={cardVariant} className="p-4 flex items-center">
+          <div className="flex items-center space-x-4">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${userIconBg}`}>
+              <UserCircle className={`w-7 h-7 ${userIconColor}`} />
             </div>
             <div>
-              <h3 className="font-bold text-gray-800">{user?.username || '用户'}</h3>
-              <p className="text-xs text-gray-500">已登录</p>
+              <div className="flex items-center gap-3">
+                <h3 className={`font-bold text-lg tracking-wide ${textPrimary}`}>
+                  {user?.username || '用户'}
+                </h3>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleLogout}
+                  icon={<LogOut className="w-3 h-3" />}
+                  className="!rounded-lg !px-3 !py-0.5 text-[10px] h-6"
+                >
+                  退出
+                </Button>
+              </div>
+              <p className={`text-xs ${textSecondary}`}>已登录终端</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="px-3 py-1.5 bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-500 text-xs font-bold rounded-lg transition-colors flex items-center cursor-pointer active:scale-95 border border-gray-200"
-          >
-            <LogOut className="w-3 h-3 mr-1" /> 退出
-          </button>
-        </div>
+        </Card>
 
-        <div className="bg-white/80 backdrop-blur-md rounded-xl overflow-hidden shadow-sm border border-gray-100">
-          {menuItems.map((item, index) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.id}>
+        {/* Menu Items */}
+        <div className="space-y-2">
+          {/* Section Label: Show only in dark mode or make it subtle in light */}
+          {isDarkTheme && (
+            <h3 className="text-xs font-bold text-luxury-gold-500/70 uppercase tracking-widest px-1">
+              通用设置
+            </h3>
+          )}
+          <Card variant={menuCardVariant} className={`!p-0 overflow-hidden divide-y ${isDarkTheme ? 'divide-white/5' : 'divide-slate-100'}`}>
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              return (
                 <button
+                  key={item.id}
                   onClick={item.onClick}
-                  className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                  className={`w-full flex items-center justify-between p-4 ${menuItemHover} transition-colors group`}
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-full bg-mahjong-50 flex items-center justify-center text-mahjong-600">
-                      <Icon className="w-5 h-5" />
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${menuItemIconBg}`}>
+                      <Icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
                     </div>
                     <div className="text-left">
-                      <div className="text-sm font-bold text-gray-800">{item.label}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{item.desc}</div>
+                      <div className={`text-sm font-bold ${textPrimary}`}>{item.label}</div>
+                      <div className={`text-xs ${textSecondary} mt-0.5`}>{item.desc}</div>
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-300" />
+                  <ChevronRight className={`w-5 h-5 ${isDarkTheme ? 'text-gray-600 group-hover:text-luxury-gold-500/50' : 'text-slate-300 group-hover:text-slate-500'} transition-colors`} />
                 </button>
-                {index < menuItems.length - 1 && <div className="h-px bg-gray-100 mx-4" />}
-              </div>
-            );
-          })}
+              );
+            })}
+          </Card>
         </div>
 
         {/* Backup Section */}
-        <div className="bg-white/80 backdrop-blur-md rounded-xl overflow-hidden shadow-sm border border-gray-100">
-          {backupItems.map((item, index) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.id}>
+        <div className="space-y-2">
+          {isDarkTheme && (
+            <h3 className="text-xs font-bold text-luxury-gold-500/70 uppercase tracking-widest px-1">
+              数据管理
+            </h3>
+          )}
+          <Card variant={menuCardVariant} className={`!p-0 overflow-hidden divide-y ${isDarkTheme ? 'divide-white/5' : 'divide-slate-100'}`}>
+            {backupItems.map((item) => {
+              const Icon = item.icon;
+              return (
                 <button
+                  key={item.id}
                   onClick={item.onClick}
-                  className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                  className={`w-full flex items-center justify-between p-4 ${menuItemHover} transition-colors group`}
                 >
                   <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
-                      <Icon className="w-5 h-5" />
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${backupItemIconBg}`}>
+                      <Icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
                     </div>
                     <div className="text-left">
-                      <div className="text-sm font-bold text-gray-800">{item.label}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{item.desc}</div>
+                      <div className={`text-sm font-bold ${textPrimary}`}>{item.label}</div>
+                      <div className={`text-xs ${textSecondary} mt-0.5`}>{item.desc}</div>
                     </div>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-300" />
+                  <ChevronRight className={`w-5 h-5 ${isDarkTheme ? 'text-gray-600 group-hover:text-luxury-gold-500/50' : 'text-slate-300 group-hover:text-slate-500'} transition-colors`} />
                 </button>
-                {index < backupItems.length - 1 && <div className="h-px bg-gray-100 mx-4" />}
-              </div>
-            );
-          })}
+              );
+            })}
+          </Card>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-md rounded-xl p-4 shadow-sm border border-gray-100 flex items-start space-x-3">
-          <Info className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+        {/* About Section */}
+        <Card variant={isDarkTheme ? "glass" : "light"} className={`p-4 flex items-start space-x-3 ${isDarkTheme ? 'bg-white/5' : ''}`}>
+          <Info className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDarkTheme ? 'text-luxury-gold-500' : 'text-slate-400'}`} />
           <div>
-            <h3 className="text-xs font-bold text-gray-600 mb-1">关于麻上记</h3>
-            <p className="text-xs text-gray-500 leading-relaxed">
+            <h3 className={`text-sm font-bold mb-1 ${textPrimary}`}>关于麻上记</h3>
+            <p className={`text-xs leading-relaxed ${textSecondary}`}>
               一款极简的个人麻将记账工具。数据存储于云端并按账号隔离，保障隐私。
               <br />
-              Version 1.1.1
+              <span className={`font-mono mt-1 inline-block ${isDarkTheme ? 'text-luxury-gold-500/50' : 'text-slate-400/70'}`}>Version 1.1.1</span>
             </p>
           </div>
-        </div>
+        </Card>
 
-        {/* Clear Data Button */}
+        {/* Danger Zone */}
         <div className="pt-4 pb-8 space-y-3">
           <div className="flex gap-3">
-            <button
+            <Button
               onClick={handleClearAllRecords}
-              className="flex-1 bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold py-3 rounded-xl border border-orange-200 transition-colors flex items-center justify-center text-sm"
+              variant="secondary"
+              className={`flex-1 !text-sm ${isDarkTheme ? '!bg-orange-500/10 !text-orange-500 !border-orange-500/20 hover:!bg-orange-500/20' : '!bg-orange-50 !text-orange-600 !border-orange-200 hover:!bg-orange-100'}`}
             >
               <Trash2 className="w-4 h-4 mr-2" />
               清空记录
-            </button>
+            </Button>
 
-            <button
+            <Button
               onClick={handleDeleteAccount}
-              className="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl border border-red-200 transition-colors flex items-center justify-center text-sm"
+              variant="secondary"
+              className={`flex-1 !text-sm ${isDarkTheme ? '!bg-red-500/10 !text-red-500 !border-red-500/20 hover:!bg-red-500/20' : '!bg-red-50 !text-red-600 !border-red-200 hover:!bg-red-100'}`}
             >
               <AlertTriangle className="w-4 h-4 mr-2" />
               注销账号
-            </button>
+            </Button>
           </div>
-          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 border border-red-100">
-            <p className="text-[10px] text-center text-gray-500">
+          <div className={`${isDarkTheme ? 'bg-red-500/5 border-red-500/10' : 'bg-red-50 border-red-100'} rounded-xl p-3 border`}>
+            <p className={`text-[10px] text-center ${isDarkTheme ? 'text-red-400/80' : 'text-slate-500'}`}>
               注销账号将永久删除所有数据，且不可恢复。
             </p>
           </div>

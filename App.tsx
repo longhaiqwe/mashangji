@@ -471,6 +471,7 @@ const App: React.FC = () => {
             onLogout={handleLogout}
             onClearData={handleClearData}
             onDataRefresh={refreshData}
+            themeId={preferences.themeId}
           />
         );
 
