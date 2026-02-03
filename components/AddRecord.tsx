@@ -89,13 +89,26 @@ const AddRecord: React.FC<AddRecordProps> = ({
   }, [initialAutoStartVoice]);
 
   const silenceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const amountInputRef = React.useRef<HTMLInputElement>(null);
 
-  // 监听键盘高度
+  // 监听键盘高度 - 使用 ref 缓存上次的键盘高度
+  const lastKeyboardHeightRef = React.useRef(0);
+
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
 
-    const showListener = Keyboard.addListener('keyboardWillShow', (info) => {
+    // 同时监听 WillShow 和 DidShow，确保不会错过事件
+    const willShowListener = Keyboard.addListener('keyboardWillShow', (info) => {
+      lastKeyboardHeightRef.current = info.keyboardHeight;
       setKeyboardHeight(info.keyboardHeight);
+    });
+
+    const didShowListener = Keyboard.addListener('keyboardDidShow', (info) => {
+      // 如果 WillShow 没触发，DidShow 作为备份
+      if (keyboardHeight === 0 && info.keyboardHeight > 0) {
+        lastKeyboardHeightRef.current = info.keyboardHeight;
+        setKeyboardHeight(info.keyboardHeight);
+      }
     });
 
     const hideListener = Keyboard.addListener('keyboardWillHide', () => {
@@ -103,10 +116,12 @@ const AddRecord: React.FC<AddRecordProps> = ({
     });
 
     return () => {
-      showListener.then(handle => handle.remove());
+      willShowListener.then(handle => handle.remove());
+      didShowListener.then(handle => handle.remove());
       hideListener.then(handle => handle.remove());
     };
-  }, []);
+  }, [keyboardHeight]);
+
 
 
   useEffect(() => {
@@ -721,7 +736,10 @@ const AddRecord: React.FC<AddRecordProps> = ({
             <div className={`flex flex-col flex-none justify-center ${inputBg} rounded-2xl p-1.5 w-24 border ${borderClass}`}>
               <motion.button
                 type="button"
-                onClick={() => setIsWin(true)}
+                onClick={() => {
+                  setIsWin(true);
+                  amountInputRef.current?.focus();
+                }}
                 className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all mb-1 ${isWin
                   ? 'bg-win-crimson text-white shadow-[0_0_20px_rgba(220,20,60,0.4)]'
                   : `${textSecondary} hover:text-win-crimson/70`
@@ -733,7 +751,10 @@ const AddRecord: React.FC<AddRecordProps> = ({
               </motion.button>
               <motion.button
                 type="button"
-                onClick={() => setIsWin(false)}
+                onClick={() => {
+                  setIsWin(false);
+                  amountInputRef.current?.focus();
+                }}
                 className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all ${!isWin
                   ? 'bg-loss-emerald text-white shadow-[0_0_20px_rgba(0,200,83,0.4)]'
                   : `${textSecondary} hover:text-loss-emerald/70`
@@ -754,6 +775,7 @@ const AddRecord: React.FC<AddRecordProps> = ({
                 ¥
               </span>
               <motion.input
+                ref={amountInputRef}
                 type="text"
                 inputMode="decimal"
                 placeholder="0.00"
