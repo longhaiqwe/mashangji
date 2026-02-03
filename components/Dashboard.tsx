@@ -133,9 +133,8 @@ const Dashboard: React.FC<DashboardProps> = ({
           <h3 className={`text-xs font-bold uppercase tracking-wider ${textSecondary}`}>
             近期战绩
           </h3>
-          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-            isDarkTheme ? 'bg-white/10 text-slate-300' : 'bg-slate-200/60 text-slate-500'
-          }`}>
+          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${isDarkTheme ? 'bg-white/10 text-slate-300' : 'bg-slate-200/60 text-slate-500'
+            }`}>
             {filteredRecords.length} 笔
           </span>
         </motion.div>
@@ -148,9 +147,8 @@ const Dashboard: React.FC<DashboardProps> = ({
             animate={{ opacity: 0.6, scale: 1 }}
             transition={{ delay: 0.4 }}
           >
-            <div className={`w-16 h-16 rounded-3xl flex items-center justify-center mb-4 ${
-              isDarkTheme ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-400'
-            }`}>
+            <div className={`w-16 h-16 rounded-3xl flex items-center justify-center mb-4 ${isDarkTheme ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-400'
+              }`}>
               <Edit2 className="w-8 h-8 opacity-50" />
             </div>
             <p className={`text-sm font-medium ${textSecondary}`}>
@@ -189,11 +187,10 @@ const Dashboard: React.FC<DashboardProps> = ({
                 ]}
               >
                 <motion.div
-                  className={`p-4 transition-all active:scale-[0.98] ${
-                    isDarkTheme
+                  className={`p-4 rounded-2xl transition-all active:scale-[0.98] ${isDarkTheme
                       ? 'bg-dark-bg-secondary border border-dark-border/20'
                       : 'bg-white border border-slate-100'
-                  }`}
+                    }`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
@@ -208,9 +205,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <div className="flex items-center space-x-3.5">
                       {/* 状态图标 */}
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          record.amount >= 0 ? 'bg-win-crimson/20 text-win-crimson' : 'bg-loss-emerald/20 text-loss-emerald'
-                        }`}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${record.amount >= 0 ? 'bg-win-crimson/20 text-win-crimson' : 'bg-loss-emerald/20 text-loss-emerald'
+                          }`}
                       >
                         <Wallet className="w-5 h-5" />
                       </div>

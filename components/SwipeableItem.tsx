@@ -78,7 +78,7 @@ const SwipeableItem: React.FC<SwipeableItemProps> = ({
 
             {/* Foreground Content Layer */}
             <motion.div
-                className="relative z-10 h-full"
+                className="relative z-10 h-full bg-inherit"
                 style={{ x }}
                 drag="x"
                 dragConstraints={{ left: maxDrag, right: 0 }}
