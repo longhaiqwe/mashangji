@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { ViewState, User, Record, Circle } from '../types';
-import { Users, Palette, ChevronRight, Info, LogOut, UserCircle, Trash2, FileDown, FileUp, MessageSquare, Shield, AlertTriangle } from 'lucide-react';
+import { Users, ChevronRight, Info, LogOut, UserCircle, Trash2, FileDown, FileUp, MessageSquare, Shield, AlertTriangle } from 'lucide-react';
 import { authService } from '../services/authService';
 import { fetchRecords, fetchCircles, addRecordsBatch, syncCircles, generateId } from '../services/storageService';
 import { Capacitor } from '@capacitor/core';
@@ -343,13 +343,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
       onClick: () => onNavigate(ViewState.SETTINGS_CIRCLES),
       desc: '添加或删除打牌圈子'
     },
-    {
-      id: 'theme',
-      label: '背景设置',
-      icon: Palette,
-      onClick: () => onNavigate(ViewState.SETTINGS_THEME),
-      desc: '更换应用背景壁纸'
-    },
+
     {
       id: 'feedback',
       label: '意见反馈',

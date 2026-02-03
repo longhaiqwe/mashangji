@@ -39,7 +39,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onChangeView, onVo
 
   // Map sub-views to their parent nav item for highlighting
   const getActiveNav = (view: ViewState) => {
-    if (view === ViewState.SETTINGS_CIRCLES || view === ViewState.SETTINGS_THEME) {
+    if (view === ViewState.SETTINGS_CIRCLES) {
       return ViewState.SETTINGS;
     }
     return view;

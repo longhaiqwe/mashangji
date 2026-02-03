@@ -11,7 +11,7 @@ import Navigation from './components/Navigation';
 import CircleManager from './components/CircleManager';
 import Statistics from './components/Statistics';
 import Settings from './components/Settings';
-import ThemeSettings from './components/ThemeSettings';
+
 import Feedback from './components/Feedback';
 import Login from './components/Login';
 import LoadingScreen from './components/LoadingScreen';
@@ -20,14 +20,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useParticleEffect } from './components/ui/ParticleEffect';
 
 // 页面层级定义 - 用于决定转场动画方向
-const PAGE_LEVEL: Record<ViewState, number> = {
+const PAGE_LEVEL: { [key in ViewState]: number } = {
   [ViewState.LOGIN]: 0,
   [ViewState.DASHBOARD]: 1,
   [ViewState.STATS]: 2,
   [ViewState.SETTINGS]: 2,
   [ViewState.ADD_RECORD]: 3,
   [ViewState.SETTINGS_CIRCLES]: 3,
-  [ViewState.SETTINGS_THEME]: 3,
+
   [ViewState.SETTINGS_FEEDBACK]: 3,
 };
 
@@ -447,14 +447,7 @@ const App: React.FC = () => {
             onBack={() => changeView(ViewState.SETTINGS)}
           />
         );
-      case ViewState.SETTINGS_THEME:
-        return (
-          <ThemeSettings
-            preferences={preferences}
-            onUpdatePreferences={handleUpdatePreferences}
-            onNavigate={changeView}
-          />
-        );
+
       case ViewState.SETTINGS_FEEDBACK:
         return (
           <Feedback
