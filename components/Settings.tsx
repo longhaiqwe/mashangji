@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { ViewState, User, Record, Circle } from '../types';
-import { Users, ChevronRight, Info, LogOut, UserCircle, Trash2, FileDown, FileUp, MessageSquare, Shield, AlertTriangle } from 'lucide-react';
+import { Users, ChevronRight, Info, LogOut, UserCircle, Trash2, FileDown, FileUp, MessageSquare, Shield, AlertTriangle, Loader2 } from 'lucide-react';
 import { authService } from '../services/authService';
 import { fetchRecords, fetchCircles, addRecordsBatch, syncCircles, generateId } from '../services/storageService';
 import { Capacitor } from '@capacitor/core';
@@ -20,6 +20,10 @@ interface SettingsProps {
 
 const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClearData, onDataRefresh, themeId = 'default' }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // State
+  const [isExporting, setIsExporting] = React.useState(false);
+
 
   // Theme Logic
   const isDarkTheme = themeId === 'black' || themeId === 'rich';
@@ -47,7 +51,12 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
   };
 
   const handleExport = async () => {
-    if (!user) return;
+    if (!user || isExporting) return;
+
+    setIsExporting(true);
+    // Give UI a moment to update before starting heavy work
+    await new Promise(resolve => setTimeout(resolve, 50));
+
     try {
       const circles = await fetchCircles(user.id);
       const records = await fetchRecords(user.id);
@@ -123,6 +132,8 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
     } catch (error) {
       console.error('Export failed:', error);
       alert('导出失败，请重试');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -384,10 +395,11 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
   const backupItems = [
     {
       id: 'export',
-      label: '导出数据',
-      icon: FileDown,
+      label: isExporting ? '正在导出...' : '导出数据',
+      icon: isExporting ? Loader2 : FileDown,
       onClick: handleExport,
-      desc: '导出为文本文件 (TXT)'
+      desc: isExporting ? '数据打包中，请稍候...' : '导出为文本文件 (TXT)',
+      disabled: isExporting
     },
     {
       id: 'import',
@@ -497,18 +509,21 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
                 <button
                   key={item.id}
                   onClick={item.onClick}
-                  className={`w-full flex items-center justify-between p-4 ${menuItemHover} transition-colors group`}
+                  disabled={item.disabled}
+                  className={`w-full flex items-center justify-between p-4 ${menuItemHover} transition-colors group ${item.disabled ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
                   <div className="flex items-center space-x-4">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${backupItemIconBg}`}>
-                      <Icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                      <Icon className={`w-5 h-5 ${item.id === 'export' && isExporting ? 'animate-spin' : 'group-hover:scale-110 transition-transform'}`} />
                     </div>
                     <div className="text-left">
                       <div className={`text-sm font-bold ${textPrimary}`}>{item.label}</div>
                       <div className={`text-xs ${textSecondary} mt-0.5`}>{item.desc}</div>
                     </div>
                   </div>
-                  <ChevronRight className={`w-5 h-5 ${isDarkTheme ? 'text-gray-600 group-hover:text-luxury-gold-500/50' : 'text-slate-300 group-hover:text-slate-500'} transition-colors`} />
+                  {!item.disabled && (
+                    <ChevronRight className={`w-5 h-5 ${isDarkTheme ? 'text-gray-600 group-hover:text-luxury-gold-500/50' : 'text-slate-300 group-hover:text-slate-500'} transition-colors`} />
+                  )}
                 </button>
               );
             })}
@@ -534,18 +549,18 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
             <Button
               onClick={handleClearAllRecords}
               variant="secondary"
-              className={`flex-1 !text-sm ${isDarkTheme ? '!bg-orange-500/10 !text-orange-500 !border-orange-500/20 hover:!bg-orange-500/20' : '!bg-orange-50 !text-orange-600 !border-orange-200 hover:!bg-orange-100'}`}
+              icon={<Trash2 className="w-4 h-4" />}
+              className={`flex-1 !text-sm whitespace-nowrap !px-2 ${isDarkTheme ? '!bg-orange-500/10 !text-orange-500 !border-orange-500/20 hover:!bg-orange-500/20' : '!bg-orange-50 !text-orange-600 !border-orange-200 hover:!bg-orange-100'}`}
             >
-              <Trash2 className="w-4 h-4 mr-2" />
               清空记录
             </Button>
 
             <Button
               onClick={handleDeleteAccount}
               variant="secondary"
-              className={`flex-1 !text-sm ${isDarkTheme ? '!bg-red-500/10 !text-red-500 !border-red-500/20 hover:!bg-red-500/20' : '!bg-red-50 !text-red-600 !border-red-200 hover:!bg-red-100'}`}
+              icon={<AlertTriangle className="w-4 h-4" />}
+              className={`flex-1 !text-sm whitespace-nowrap !px-2 ${isDarkTheme ? '!bg-red-500/10 !text-red-500 !border-red-500/20 hover:!bg-red-500/20' : '!bg-red-50 !text-red-600 !border-red-200 hover:!bg-red-100'}`}
             >
-              <AlertTriangle className="w-4 h-4 mr-2" />
               注销账号
             </Button>
           </div>
