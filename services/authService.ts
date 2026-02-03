@@ -99,14 +99,41 @@ export const authService = {
         return null; // Return null to indicate redirecting
       }
 
-      // IOS NATIVE LOGIC: Use Capacitor Plugin
+      // IOS NATIVE LOGIC: Use Capacitor Plugin with auto-retry
       const { SignInWithApple } = await import('@capacitor-community/apple-sign-in');
 
-      const result = await SignInWithApple.authorize({
-        clientId: 'io.supabase.mashangji.service',
-        scopes: 'email name',
-        redirectURI: 'https://xdvdxbjdtkzmyoqrgdmm.supabase.co/auth/v1/callback',
-      });
+      // Helper function to attempt Apple Sign In with retry logic
+      // iOS sometimes fails on first attempt due to system services not being fully initialized
+      const attemptAppleSignIn = async (retryCount = 0, maxRetries = 2): Promise<any> => {
+        try {
+          return await SignInWithApple.authorize({
+            clientId: 'io.supabase.mashangji.service',
+            scopes: 'email name',
+            redirectURI: 'https://xdvdxbjdtkzmyoqrgdmm.supabase.co/auth/v1/callback',
+          });
+        } catch (error: any) {
+          const errorMessage = error?.message || error?.errorMessage || '';
+
+          // Check if this is a system initialization error (error 1000) that's worth retrying
+          // Do NOT retry if user explicitly canceled (error 1001 or contains "canceled")
+          const isSystemError = errorMessage.includes('error 1000') ||
+            errorMessage.includes('AuthorizationError Code=1000');
+          const isUserCanceled = errorMessage.includes('error 1001') ||
+            errorMessage.toLowerCase().includes('canceled') ||
+            errorMessage.toLowerCase().includes('cancelled');
+
+          if (isSystemError && !isUserCanceled && retryCount < maxRetries) {
+            console.log(`[AuthService] Apple Sign In failed with system error, retrying (${retryCount + 1}/${maxRetries})...`);
+            // Wait before retry to give iOS time to initialize services
+            await new Promise(resolve => setTimeout(resolve, 500));
+            return attemptAppleSignIn(retryCount + 1, maxRetries);
+          }
+
+          throw error; // Re-throw if not retryable or max retries exceeded
+        }
+      };
+
+      const result = await attemptAppleSignIn();
 
       if (result.response && result.response.identityToken) {
         console.log('[AuthService] Apple Identity Token received. Aud:', result.response.identityToken.split('.')[1] ? JSON.parse(atob(result.response.identityToken.split('.')[1])).aud : 'unknown');
