@@ -26,3 +26,7 @@ export const STORAGE_KEYS = {
   CIRCLES: 'msj_circles_v1',
   USER_PREFS: 'msj_prefs_v1',
 };
+
+// Voice trial constants
+export const VOICE_TRIAL_LIMIT = 1; // TODO: 测试完改回 10
+export const VOICE_TRIAL_STORAGE_KEY = 'msj_voice_trial_used';

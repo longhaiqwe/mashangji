@@ -2,12 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Circle, Record } from '../types';
-import { ChevronLeft, Calendar, FileText, Check, Users, Sparkles, X, Loader2, Trash2, RefreshCw, Mic, MicOff } from 'lucide-react';
+import { ChevronLeft, Calendar, FileText, Check, Users, Sparkles, X, Loader2, Trash2, RefreshCw, Mic, MicOff, Crown } from 'lucide-react';
 import { generateId } from '../services/storageService';
 import { analyzeText, ParsedRecord } from '../services/geminiService';
 import { Capacitor } from '@capacitor/core';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
 import { Keyboard } from '@capacitor/keyboard';
+import { useVoiceTrial } from '../hooks/useVoiceTrial';
+import TrialExhaustedModal from './TrialExhaustedModal';
 
 type ImportMode = 'batch' | 'voice';
 
@@ -72,6 +74,10 @@ const AddRecord: React.FC<AddRecordProps> = ({
 
   // Keyboard height for iOS
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Voice trial state
+  const { trialUsed, trialLimit, remaining, canUseVoice, isPro, incrementUsage, loading: trialLoading } = useVoiceTrial();
+  const [showTrialExhausted, setShowTrialExhausted] = useState(false);
 
   // Ref to keep track of latest importText for async operations
   const importTextRef = React.useRef(importText);
@@ -457,6 +463,12 @@ const AddRecord: React.FC<AddRecordProps> = ({
       return;
     }
 
+    // 检查试用次数（仅在语音模式下检查）
+    if (importMode === 'voice' && !canUseVoice) {
+      setShowTrialExhausted(true);
+      return;
+    }
+
     setIsAnalyzing(true);
     setParsedResults([]);
     setLastImportText(textToAnalyze);
@@ -485,9 +497,17 @@ const AddRecord: React.FC<AddRecordProps> = ({
         setImportText('');
         setParsedResults([]);
         setShowImportModal(false);
+        // 语音模式下成功识别，增加试用计数
+        if (importMode === 'voice') {
+          incrementUsage();
+        }
       } else {
         setParsedResults(results);
         setImportText('');
+        // 语音模式下成功识别多条，增加试用计数
+        if (importMode === 'voice') {
+          incrementUsage();
+        }
       }
     } catch (err: any) {
       console.error("Analysis Error:", err);
@@ -680,6 +700,10 @@ const AddRecord: React.FC<AddRecordProps> = ({
         <motion.div
           className={`mx-4 mt-3 px-4 py-3 rounded-xl flex items-center justify-between cursor-pointer ${isDarkTheme ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-amber-50 border border-amber-200'}`}
           onClick={() => {
+            if (!canUseVoice) {
+              setShowTrialExhausted(true);
+              return;
+            }
             setImportMode('voice');
             setAutoStartVoice(true);
             setShowImportModal(true);
@@ -696,14 +720,18 @@ const AddRecord: React.FC<AddRecordProps> = ({
             </div>
             <div>
               <p className={`text-sm font-medium ${isDarkTheme ? 'text-amber-400' : 'text-amber-700'}`}>
-                🎤 试试 AI 语音记账
+                🎤 {canUseVoice ? `AI 语音记账 (剩余 ${remaining} 次)` : 'AI 语音记账 (试用已用完)'}
               </p>
               <p className={`text-xs ${isDarkTheme ? 'text-amber-500/70' : 'text-amber-600/70'}`}>
-                直接说出战绩，或在首页长按 ➕ 按钮进入
+                {canUseVoice ? '直接说出战绩，或在首页长按 ➕ 按钮进入' : '升级到 Pro 解锁无限使用'}
               </p>
             </div>
           </div>
-          <ChevronLeft className={`w-5 h-5 rotate-180 ${isDarkTheme ? 'text-amber-500/50' : 'text-amber-400'}`} />
+          {canUseVoice ? (
+            <ChevronLeft className={`w-5 h-5 rotate-180 ${isDarkTheme ? 'text-amber-500/50' : 'text-amber-400'}`} />
+          ) : (
+            <Crown className={`w-5 h-5 ${isDarkTheme ? 'text-amber-500' : 'text-amber-500'}`} />
+          )}
         </motion.div>
       )}
 
@@ -911,6 +939,12 @@ const AddRecord: React.FC<AddRecordProps> = ({
                     <Sparkles className="w-5 h-5 mr-2 text-luxury-gold-500" />
                   </motion.div>
                   {importMode === 'voice' ? '语音记账' : '批量导入'}
+                  {/* 语音模式显示剩余次数 */}
+                  {importMode === 'voice' && !isPro && (
+                    <span className="ml-2 text-xs font-normal bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full">
+                      剩余 {remaining} 次
+                    </span>
+                  )}
                 </h3>
                 <div className="flex items-center space-x-2">
                   <motion.button
@@ -1128,6 +1162,12 @@ const AddRecord: React.FC<AddRecordProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Trial Exhausted Modal */}
+      <TrialExhaustedModal
+        isOpen={showTrialExhausted}
+        onClose={() => setShowTrialExhausted(false)}
+      />
     </div>
   );
 };
