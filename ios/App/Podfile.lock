@@ -14,6 +14,8 @@ PODS:
     - Capacitor
   - CapacitorShare (6.0.4):
     - Capacitor
+  - CapacitorSplashScreen (6.0.4):
+    - Capacitor
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
@@ -24,6 +26,7 @@ DEPENDENCIES:
   - "CapacitorKeyboard (from `../../node_modules/@capacitor/keyboard`)"
   - "CapacitorNetwork (from `../../node_modules/@capacitor/network`)"
   - "CapacitorShare (from `../../node_modules/@capacitor/share`)"
+  - "CapacitorSplashScreen (from `../../node_modules/@capacitor/splash-screen`)"
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -42,6 +45,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/network"
   CapacitorShare:
     :path: "../../node_modules/@capacitor/share"
+  CapacitorSplashScreen:
+    :path: "../../node_modules/@capacitor/splash-screen"
 
 SPEC CHECKSUMS:
   Capacitor: c95400d761e376be9da6be5a05f226c0e865cebf
@@ -52,7 +57,8 @@ SPEC CHECKSUMS:
   CapacitorKeyboard: e8cd50fd5cbdd023a5947a5c0f5cca6e5aa5a253
   CapacitorNetwork: 093efa3664b692a971bdd01be70523291cd6a87f
   CapacitorShare: 77ff779e3b7c6ae9fb5461e52cf7ef805d429491
+  CapacitorSplashScreen: ef140a8b1ea7244e0c245ce2dd4ce5251e7ab86a
 
-PODFILE CHECKSUM: fda0afa50a98846abd81fa06990b5e0f83e8e6dc
+PODFILE CHECKSUM: 61814ada7ce73625113947df7fd422fa2f80279e
 
 COCOAPODS: 1.16.2

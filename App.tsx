@@ -4,6 +4,7 @@ import { Record, Circle, ViewState, UserPreferences, User } from './types';
 import * as Storage from './services/storageService';
 import { authService } from './services/authService';
 import { Network } from '@capacitor/network';
+import { SplashScreen } from '@capacitor/splash-screen';
 import { DEFAULT_PREFERENCES, DEFAULT_CIRCLES } from './constants';
 import Dashboard from './components/Dashboard';
 import AddRecord from './components/AddRecord';
@@ -110,6 +111,8 @@ const App: React.FC = () => {
       } finally {
         if (mounted) {
           setIsInitializing(false);
+          // 隐藏原生启动屏 - 确保 React 已准备好后再显示 WebView 内容
+          SplashScreen.hide();
         }
       }
     };
@@ -365,6 +368,8 @@ const App: React.FC = () => {
   };
 
   const getThemeConfig = () => {
+    // 在初始化阶段使用白色背景，与 LoadingScreen 保持一致，避免闪烁
+    if (isInitializing) return { className: 'bg-white', style: {} };
     if (view === ViewState.LOGIN) return { className: 'bg-slate-50', style: {} };
 
     if (preferences.themeId === 'custom' && preferences.backgroundImage) {
