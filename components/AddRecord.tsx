@@ -7,6 +7,7 @@ import { generateId } from '../services/storageService';
 import { analyzeText, ParsedRecord } from '../services/geminiService';
 import { Capacitor } from '@capacitor/core';
 import { SpeechRecognition } from '@capacitor-community/speech-recognition';
+import { Keyboard } from '@capacitor/keyboard';
 
 type ImportMode = 'batch' | 'voice';
 
@@ -69,6 +70,9 @@ const AddRecord: React.FC<AddRecordProps> = ({
   const [tempTranscript, setTempTranscript] = useState('');
   const [autoStartVoice, setAutoStartVoice] = useState(initialAutoStartVoice);
 
+  // Keyboard height for iOS
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
   // Ref to keep track of latest importText for async operations
   const importTextRef = React.useRef(importText);
   useEffect(() => {
@@ -85,6 +89,25 @@ const AddRecord: React.FC<AddRecordProps> = ({
   }, [initialAutoStartVoice]);
 
   const silenceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // 监听键盘高度
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const showListener = Keyboard.addListener('keyboardWillShow', (info) => {
+      setKeyboardHeight(info.keyboardHeight);
+    });
+
+    const hideListener = Keyboard.addListener('keyboardWillHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showListener.then(handle => handle.remove());
+      hideListener.then(handle => handle.remove());
+    };
+  }, []);
+
 
   useEffect(() => {
     // Silence Detection: Auto-stop recording if no speech for 2.5 seconds
@@ -637,11 +660,11 @@ const AddRecord: React.FC<AddRecordProps> = ({
         </motion.button>
       </motion.div>
 
-      <form onSubmit={handleSubmit} className="flex-1 flex flex-col p-6 space-y-6 overflow-y-auto">
+      <form onSubmit={handleSubmit} className="flex-1 flex flex-col p-4 space-y-4 overflow-y-auto">
 
         {/* Compact Layout */}
         <motion.div
-          className="flex flex-col space-y-6"
+          className="flex flex-col space-y-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
@@ -783,29 +806,30 @@ const AddRecord: React.FC<AddRecordProps> = ({
 
         </motion.div>
 
-        {/* Spacer to push content up if needed, though flex-col space-y handles it */}
-        <div className="flex-1"></div>
-
-        {/* Fixed Footer with Submit Button */}
-        <motion.div
-          className={`flex-none p-4 border-t ${borderClass} ${bgClass} z-10 safe-area-bottom`}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <motion.button
-            onClick={(e) => handleSubmit(e as any)}
-            className={`w-full font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center transition-all ${isWin
-              ? 'bg-win-crimson text-white shadow-[0_0_30px_rgba(220,20,60,0.4)] hover:shadow-[0_0_40px_rgba(220,20,60,0.5)]'
-              : 'bg-loss-emerald text-white shadow-[0_0_30px_rgba(0,200,83,0.4)] hover:shadow-[0_0_40px_rgba(0,200,83,0.5)]'
-              }`}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Check className="w-5 h-5 mr-2" /> {initialRecord ? '更新记录' : '保存'}
-          </motion.button>
-        </motion.div>
+        {/* Spacer to account for fixed footer */}
+        <div style={{ height: keyboardHeight > 0 ? keyboardHeight + 80 : 80 }}></div>
       </form>
+
+      {/* Fixed Footer with Submit Button - 固定在底部，键盘弹出时上移 */}
+      <motion.div
+        className={`fixed left-0 right-0 p-4 border-t ${borderClass} ${bgClass} z-50 max-w-md mx-auto`}
+        style={{ bottom: keyboardHeight > 0 ? keyboardHeight : 0 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <motion.button
+          onClick={(e) => handleSubmit(e as any)}
+          className={`w-full font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center transition-all ${isWin
+            ? 'bg-win-crimson text-white shadow-[0_0_30px_rgba(220,20,60,0.4)] hover:shadow-[0_0_40px_rgba(220,20,60,0.5)]'
+            : 'bg-loss-emerald text-white shadow-[0_0_30px_rgba(0,200,83,0.4)] hover:shadow-[0_0_40px_rgba(0,200,83,0.5)]'
+            }`}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Check className="w-5 h-5 mr-2" /> {initialRecord ? '更新记录' : '保存'}
+        </motion.button>
+      </motion.div>
 
       {/* Import Modal */}
       <AnimatePresence>
