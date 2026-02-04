@@ -476,6 +476,7 @@ const App: React.FC = () => {
           <Feedback
             onNavigate={changeView}
             userId={user?.id}
+            themeId={preferences.themeId}
           />
         );
       case ViewState.STATS:

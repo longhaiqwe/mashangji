@@ -3,13 +3,16 @@ import { ChevronLeft, Send, Mic, MicOff, Loader2, MessageSquare, AlertCircle } f
 import { supabase } from '../services/supabase';
 import { useVoiceInput } from '../hooks/useVoiceInput';
 import { ViewState } from '../types';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
 
 interface FeedbackProps {
   onNavigate: (view: ViewState) => void;
   userId?: string;
+  themeId?: string;
 }
 
-const Feedback: React.FC<FeedbackProps> = ({ onNavigate, userId }) => {
+const Feedback: React.FC<FeedbackProps> = ({ onNavigate, userId, themeId = 'default' }) => {
   const [content, setContent] = useState('');
   const [contactInfo, setContactInfo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,6 +27,29 @@ const Feedback: React.FC<FeedbackProps> = ({ onNavigate, userId }) => {
     resetTranscript, 
     error: voiceError 
   } = useVoiceInput();
+
+  // Theme Styles
+  const isDarkTheme = themeId === 'black' || themeId === 'rich';
+  const bgClass = isDarkTheme ? 'bg-dark-bg-primary' : 'bg-light-bg-primary';
+  const headerBg = isDarkTheme ? 'bg-dark-bg-secondary/70 border-luxury-gold-500/10' : 'bg-white/80 border-slate-200';
+  const textPrimary = isDarkTheme ? 'text-white' : 'text-slate-900';
+  const textSecondary = isDarkTheme ? 'text-slate-400' : 'text-slate-500';
+  const cardVariant = isDarkTheme ? 'glass' : 'light';
+  const inputClass = isDarkTheme
+    ? 'bg-dark-bg-tertiary/70 border-luxury-gold-500/20 text-white placeholder:text-slate-500 focus:border-luxury-gold-500/50'
+    : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-luxury-gold-500/60';
+  const hintChip = isDarkTheme
+    ? 'bg-white/5 text-slate-300 border-white/10'
+    : 'bg-slate-50 text-slate-500 border-slate-200';
+  const voiceChip = isDarkTheme
+    ? 'bg-win-crimson/15 text-win-crimson border-win-crimson/30'
+    : 'bg-rose-50 text-rose-600 border-rose-200';
+  const successChip = isDarkTheme
+    ? 'bg-luxury-gold-500/10 text-luxury-gold-400 border-luxury-gold-500/30'
+    : 'bg-amber-50 text-amber-700 border-amber-200';
+  const errorChip = isDarkTheme
+    ? 'bg-win-crimson/15 text-win-crimson border-win-crimson/30'
+    : 'bg-rose-50 text-rose-600 border-rose-200';
 
   // Append voice transcript to content
   useEffect(() => {
@@ -122,120 +148,138 @@ const Feedback: React.FC<FeedbackProps> = ({ onNavigate, userId }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
-      {/* Header */}
-      <div className="flex items-center px-4 h-14 border-b border-gray-100 flex-shrink-0">
-        <button onClick={() => onNavigate(ViewState.SETTINGS)} className="p-2 -ml-2 text-gray-500">
-          <ChevronLeft className="w-6 h-6" />
-        </button>
-        <h2 className="flex-1 text-center font-bold text-lg text-gray-800">意见反馈</h2>
-        <div className="w-10" /> {/* Spacer */}
-      </div>
+    <div className={`flex flex-col h-full ${bgClass} relative overflow-hidden`}>
+      {/* Ambient background glow */}
+      <div className={`absolute -top-24 -right-16 w-64 h-64 rounded-full blur-3xl ${isDarkTheme ? 'bg-luxury-gold-500/10' : 'bg-amber-200/40'}`} />
+      <div className={`absolute -bottom-28 -left-16 w-72 h-72 rounded-full blur-3xl ${isDarkTheme ? 'bg-win-crimson/10' : 'bg-rose-200/40'}`} />
 
-      <div className="flex-1 overflow-y-auto p-6">
-        {submitStatus === 'success' ? (
-          <div className="h-full flex flex-col items-center justify-center text-center space-y-4 animate-in fade-in zoom-in duration-300">
-            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-              <Send className="w-8 h-8" />
+      <div className="relative z-10 flex flex-col h-full">
+        {/* Header */}
+        <div className={`safe-top px-6 pb-4 flex-shrink-0 sticky top-0 z-20 backdrop-blur-xl border-b ${headerBg}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <button
+                onClick={() => onNavigate(ViewState.SETTINGS)}
+                className={`p-2 -ml-2 mr-2 rounded-full transition-all ${isDarkTheme ? 'text-white/70 hover:bg-white/10' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <div>
+                <h2 className={`text-xl font-display tracking-tight ${textPrimary}`}>意见反馈</h2>
+                <p className={`text-xs mt-0.5 ${textSecondary}`}>我们会认真阅读每条建议</p>
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-gray-800">感谢您的反馈！</h3>
-            <p className="text-gray-500">我们会认真阅读每一条建议，努力做得更好。</p>
-            <button 
-              onClick={() => onNavigate(ViewState.SETTINGS)}
-              className="mt-8 text-mahjong-600 font-bold hover:underline"
-            >
-              返回设置
-            </button>
+            <div className="w-10" />
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-gray-700 flex items-center justify-between">
-                <span>反馈内容</span>
-                {isListening && <span className="text-indigo-600 text-xs animate-pulse">正在听...</span>}
-              </label>
-              <div className="relative">
-                <textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="请详细描述您遇到的问题或建议..."
-                  className="w-full h-40 p-4 bg-gray-50 rounded-xl border border-gray-200 resize-none outline-none focus:ring-2 focus:ring-mahjong-500/20 text-base"
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-5 safe-bottom">
+          {submitStatus === 'success' ? (
+            <div className="h-full flex items-center justify-center">
+              <Card variant={cardVariant} size="lg" hover={false} className="text-center max-w-[360px] mx-auto">
+                <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 border ${successChip}`}>
+                  <Send className="w-8 h-8" />
+                </div>
+                <h3 className={`text-xl font-bold ${textPrimary}`}>感谢您的反馈！</h3>
+                <p className={`text-sm mt-2 ${textSecondary}`}>我们会认真阅读每一条建议，持续优化体验。</p>
+                <div className="mt-6">
+                  <Button variant="secondary" size="md" onClick={() => onNavigate(ViewState.SETTINGS)}>
+                    返回设置
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Card variant={cardVariant} size="sm" hover={false}>
+                <div className="flex items-center justify-between mb-2">
+                  <label className={`text-sm font-bold ${textPrimary}`}>反馈内容</label>
+                  {isListening && (
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${voiceChip} animate-pulse`}>
+                      正在听...
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="请详细描述您遇到的问题或建议..."
+                    className={`w-full h-36 p-4 rounded-2xl border resize-none outline-none transition-colors ${inputClass}`}
+                    disabled={isSubmitting}
+                  />
+
+                  {/* Voice Button */}
+                  <button
+                    type="button"
+                    onClick={handleToggleVoice}
+                    className={`absolute right-3 bottom-3 p-2 rounded-full transition-all shadow-sm border ${isListening
+                      ? 'bg-win-crimson text-white border-win-crimson/30 animate-pulse'
+                      : isDarkTheme
+                        ? 'bg-white/5 text-slate-300 border-white/10 hover:text-luxury-gold-400'
+                        : 'bg-white text-slate-500 border-slate-200 hover:text-amber-600'
+                      }`}
+                    title="语音输入"
+                  >
+                    {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                  </button>
+                </div>
+
+                {/* Voice Transcript Preview */}
+                {isListening && transcript && (
+                  <div className={`mt-3 p-3 rounded-2xl border text-sm ${isDarkTheme ? 'bg-white/5 text-slate-200 border-white/10' : 'bg-slate-50 text-slate-700 border-slate-200'
+                    } animate-in fade-in slide-in-from-top-2`}>
+                    <p className="font-bold text-xs mb-1">识别中:</p>
+                    {transcript}
+                  </div>
+                )}
+
+                {voiceError && (
+                  <div className={`mt-3 text-xs flex items-center border rounded-xl px-3 py-2 ${errorChip}`}>
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    {voiceError}
+                  </div>
+                )}
+              </Card>
+
+              <Card variant={cardVariant} size="sm" hover={false}>
+                <label className={`block text-sm font-bold mb-2 ${textPrimary}`}>联系方式 (选填)</label>
+                <input
+                  type="text"
+                  value={contactInfo}
+                  onChange={(e) => setContactInfo(e.target.value)}
+                  placeholder="邮箱或手机号，方便我们联系您"
+                  className={`w-full p-3 rounded-2xl border outline-none transition-colors ${inputClass}`}
                   disabled={isSubmitting}
                 />
-                
-                {/* Voice Button */}
-                <button
-                  type="button"
-                  onClick={handleToggleVoice}
-                  className={`absolute right-3 bottom-3 p-2 rounded-full transition-all shadow-sm ${
-                    isListening 
-                      ? 'bg-red-500 text-white animate-pulse' 
-                      : 'bg-white text-gray-500 hover:text-indigo-600 border border-gray-200'
-                  }`}
-                  title="语音输入"
-                >
-                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                </button>
-              </div>
-              
-              {/* Voice Transcript Preview */}
-              {isListening && transcript && (
-                <div className="bg-indigo-50 p-3 rounded-lg text-sm text-indigo-800 border border-indigo-100 animate-in fade-in slide-in-from-top-2">
-                  <p className="font-bold text-xs mb-1">识别中:</p>
-                  {transcript}
+              </Card>
+
+              {submitStatus === 'error' && (
+                <div className={`p-3 text-sm rounded-2xl border flex items-center ${errorChip}`}>
+                  <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+                  {errorMessage}
                 </div>
               )}
-              
-              {voiceError && (
-                <p className="text-xs text-red-500 flex items-center">
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  {voiceError}
-                </p>
-              )}
-            </div>
 
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-gray-700">联系方式 (选填)</label>
-              <input
-                type="text"
-                value={contactInfo}
-                onChange={(e) => setContactInfo(e.target.value)}
-                placeholder="邮箱或手机号，方便我们联系您"
-                className="w-full p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-mahjong-500/20"
-                disabled={isSubmitting}
-              />
-            </div>
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                fullWidth
+                loading={isSubmitting}
+                disabled={isSubmitting || !content.trim()}
+                icon={!isSubmitting ? <Send className="w-5 h-5" /> : undefined}
+              >
+                {isSubmitting ? '提交中...' : '提交反馈'}
+              </Button>
 
-            {submitStatus === 'error' && (
-              <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center">
-                <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
-                {errorMessage}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isSubmitting || !content.trim()}
-              className="w-full bg-mahjong-600 hover:bg-mahjong-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl shadow-lg shadow-mahjong-500/30 active:scale-[0.98] transition-all flex items-center justify-center"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  提交中...
-                </>
-              ) : (
-                <>
-                  <Send className="w-5 h-5 mr-2" />
-                  提交反馈
-                </>
-              )}
-            </button>
-            
-            <p className="text-center text-xs text-gray-400">
-              您的反馈将帮助我们不断改进产品体验
-            </p>
-          </form>
-        )}
+              <p className={`text-center text-xs ${textSecondary}`}>
+                您的反馈将帮助我们不断改进产品体验
+              </p>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );
