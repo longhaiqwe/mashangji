@@ -34,9 +34,10 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
   const bgClass = isDarkTheme ? 'bg-dark-bg' : 'bg-slate-50';
   const textPrimary = isDarkTheme ? 'text-white' : 'text-slate-800';
   const textSecondary = isDarkTheme ? 'text-gray-400' : 'text-slate-500';
-  const headerBg = isDarkTheme ? 'bg-dark-bg-secondary/50 border-luxury-gold-500/10' : 'bg-white/80 border-slate-200';
+  const headerBg = isDarkTheme ? 'bg-dark-bg-secondary/70 border-luxury-gold-500/10' : 'bg-white/80 border-slate-200';
   const cardVariant = isDarkTheme ? 'glass' : 'light';
   const menuCardVariant = isDarkTheme ? 'default' : 'light';
+  const sectionTitle = isDarkTheme ? 'text-luxury-gold-500/70' : 'text-slate-400';
 
   // Icon Containers
   const userIconBg = isDarkTheme ? 'bg-luxury-gold-500/10 border-luxury-gold-500/30' : 'bg-orange-100 border-orange-200';
@@ -383,13 +384,6 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
       icon: MessageSquare,
       onClick: () => onNavigate(ViewState.SETTINGS_FEEDBACK),
       desc: '提交建议或遇到的问题'
-    },
-    {
-      id: 'privacy',
-      label: '隐私政策',
-      icon: Shield,
-      onClick: openPrivacyPolicy,
-      desc: '查看数据隐私保护条款'
     }
   ];
 
@@ -420,7 +414,12 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
   };
 
   return (
-    <div className={`flex flex-col h-full ${bgClass} ${textPrimary}`}>
+    <div className={`flex flex-col h-full ${bgClass} ${textPrimary} relative overflow-hidden`}>
+      {/* Ambient background glow */}
+      <div className={`absolute -top-24 -right-16 w-64 h-64 rounded-full blur-3xl ${isDarkTheme ? 'bg-luxury-gold-500/10' : 'bg-amber-200/40'}`} />
+      <div className={`absolute -bottom-28 -left-16 w-72 h-72 rounded-full blur-3xl ${isDarkTheme ? 'bg-win-crimson/10' : 'bg-rose-200/40'}`} />
+
+      <div className="relative z-10 flex flex-col h-full">
       <input
         type="file"
         ref={fileInputRef}
@@ -429,14 +428,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
         className="hidden"
       />
 
-      {/* Header */}
-      <div className={`${headerBg} backdrop-blur-md px-4 h-14 flex items-center justify-center border-b sticky top-0 z-10 transition-colors`}>
-        <h2 className={`text-lg font-bold ${isDarkTheme ? 'text-transparent bg-clip-text bg-gold-gradient' : 'text-slate-800'}`}>
-          系统设置
-        </h2>
-      </div>
-
-      <div className="p-4 space-y-6 overflow-y-auto">
+      <div className="px-4 py-5 space-y-5 overflow-y-auto safe-top safe-bottom">
         {/* User Profile Card */}
         <Card variant={cardVariant} className="p-4 flex items-center">
           <div className="flex items-center space-x-4">
@@ -490,12 +482,9 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
 
         {/* Menu Items */}
         <div className="space-y-2">
-          {/* Section Label: Show only in dark mode or make it subtle in light */}
-          {isDarkTheme && (
-            <h3 className="text-xs font-bold text-luxury-gold-500/70 uppercase tracking-widest px-1">
-              通用设置
-            </h3>
-          )}
+          <h3 className={`text-xs font-bold uppercase tracking-widest px-1 ${sectionTitle}`}>
+            通用设置
+          </h3>
           <Card variant={menuCardVariant} className={`!p-0 overflow-hidden divide-y ${isDarkTheme ? 'divide-white/5' : 'divide-slate-100'}`}>
             {menuItems.map((item) => {
               const Icon = item.icon;
@@ -523,11 +512,9 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
 
         {/* Backup Section */}
         <div className="space-y-2">
-          {isDarkTheme && (
-            <h3 className="text-xs font-bold text-luxury-gold-500/70 uppercase tracking-widest px-1">
-              数据管理
-            </h3>
-          )}
+          <h3 className={`text-xs font-bold uppercase tracking-widest px-1 ${sectionTitle}`}>
+            数据管理
+          </h3>
           <Card variant={menuCardVariant} className={`!p-0 overflow-hidden divide-y ${isDarkTheme ? 'divide-white/5' : 'divide-slate-100'}`}>
             {backupItems.map((item) => {
               const Icon = item.icon;
@@ -602,6 +589,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
         isOpen={showProModal}
         onClose={() => setShowProModal(false)}
       />
+      </div>
     </div>
   );
 };
