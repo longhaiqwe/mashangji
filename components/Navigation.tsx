@@ -140,10 +140,10 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onChangeView, onVo
                   }}
                   className="flex flex-col items-center justify-center select-none touch-none"
                 >
-                  <div className="bg-primary-600 rounded-full p-4 shadow-lg shadow-emerald-500/30 border-4 border-slate-50 transform transition-transform active:scale-95">
-                    <Icon className="w-8 h-8 text-white" />
+                  <div className="bg-gold-gradient rounded-full p-4 shadow-gold-glow-sm border-4 border-slate-50 transform transition-transform active:scale-95">
+                    <Icon className="w-8 h-8 text-white drop-shadow-sm" />
                   </div>
-                  <span className="text-xs font-medium text-gray-500 mt-1">{item.label}</span>
+                  <span className="text-xs font-medium text-luxury-gold-600 mt-1">{item.label}</span>
                 </button>
               </div>
             );
@@ -153,7 +153,7 @@ const Navigation: React.FC<NavigationProps> = ({ currentView, onChangeView, onVo
             <button
               key={item.view}
               onClick={() => onChangeView(item.view)}
-              className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${isActive ? 'text-primary-600' : 'text-slate-400'
+              className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${isActive ? 'text-luxury-gold-500' : 'text-slate-400'
                 }`}
             >
               <Icon className={`w-6 h-6 ${isActive ? 'fill-current' : ''}`} strokeWidth={isActive ? 2.5 : 2} />
