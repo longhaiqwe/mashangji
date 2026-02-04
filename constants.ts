@@ -27,6 +27,10 @@ export const STORAGE_KEYS = {
   USER_PREFS: 'msj_prefs_v1',
 };
 
-// Voice trial constants
-export const VOICE_TRIAL_LIMIT = 1; // TODO: 测试完改回 10
+// Voice trial constants (for non-Pro users)
+export const VOICE_TRIAL_LIMIT = 10;
 export const VOICE_TRIAL_STORAGE_KEY = 'msj_voice_trial_used';
+
+// Pro user daily voice limit
+export const PRO_DAILY_VOICE_LIMIT = 10;
+export const PRO_DAILY_VOICE_STORAGE_KEY = 'msj_pro_daily_voice';

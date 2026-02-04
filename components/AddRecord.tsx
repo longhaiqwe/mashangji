@@ -725,10 +725,16 @@ const AddRecord: React.FC<AddRecordProps> = ({
             </div>
             <div>
               <p className={`text-sm font-medium ${isDarkTheme ? 'text-amber-400' : 'text-amber-700'}`}>
-                🎤 {canUseVoice ? `AI 语音记账 (剩余 ${remaining} 次)` : 'AI 语音记账 (试用已用完)'}
+                🎤 {canUseVoice
+                  ? (isPro ? `AI 语音记账 (今日剩余 ${remaining} 次)` : `AI 语音记账 (剩余 ${remaining} 次试用)`)
+                  : (isPro ? 'AI 语音记账 (今日次数已用完)' : 'AI 语音记账 (试用已用完)')
+                }
               </p>
               <p className={`text-xs ${isDarkTheme ? 'text-amber-500/70' : 'text-amber-600/70'}`}>
-                {canUseVoice ? '直接说出战绩，或在首页长按 ➕ 按钮进入' : '升级到 Pro 解锁无限使用'}
+                {canUseVoice
+                  ? '直接说出战绩，或在首页长按 ➕ 按钮进入'
+                  : (isPro ? '今日额度已用完，明天再来' : '升级到 Pro 解锁无限使用')
+                }
               </p>
             </div>
           </div>
@@ -945,9 +951,9 @@ const AddRecord: React.FC<AddRecordProps> = ({
                   </motion.div>
                   {importMode === 'voice' ? '语音记账' : '批量导入'}
                   {/* 语音模式显示剩余次数 */}
-                  {importMode === 'voice' && !isPro && (
+                  {importMode === 'voice' && (
                     <span className="ml-2 text-xs font-normal bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full">
-                      剩余 {remaining} 次
+                      {isPro ? `今日剩余 ${remaining} 次` : `剩余 ${remaining} 次`}
                     </span>
                   )}
                 </h3>
