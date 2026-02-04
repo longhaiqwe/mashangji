@@ -1,0 +1,16 @@
+# Antigravity Project Rules
+
+## 沟通原则 (Communication)
+- 始终使用中文与我交流。
+- Implementation plan (实施计划) 和 Walkthrough (演示) 文档也必须使用中文。
+
+## 代码修改流程 (Workflow)
+- 在修改代码前，先用中文解释原理，再说明具体的改动点。
+- 修改后必须确保代码能够通过编译。
+- 如果改动较大，请先创建一个 `implementation_plan.md` 并请求我确认。
+
+## 自动化与验证 (Automation & Verification)
+- 每次修改代码后，必须运行以下命令序列以确保构建和同步：
+  ```bash
+  npm run build && npm run cap:sync && npm run cap:open
+  ```

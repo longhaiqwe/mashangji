@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../services/supabase';
 import { VOICE_TRIAL_LIMIT, VOICE_TRIAL_STORAGE_KEY } from '../constants';
+import { useSubscription } from '../context/SubscriptionContext';
 
 export interface UseVoiceTrialResult {
     trialUsed: number;       // 已使用次数
@@ -13,6 +14,7 @@ export interface UseVoiceTrialResult {
 }
 
 export const useVoiceTrial = (): UseVoiceTrialResult => {
+    const { isPro } = useSubscription();
     const [trialUsed, setTrialUsed] = useState<number>(() => {
         try {
             const cached = localStorage.getItem(VOICE_TRIAL_STORAGE_KEY);
@@ -21,7 +23,7 @@ export const useVoiceTrial = (): UseVoiceTrialResult => {
             return 0;
         }
     });
-    const [isPro, setIsPro] = useState<boolean>(false); // 预留Pro状态
+    // const [isPro, setIsPro] = useState<boolean>(false); // REMOVED
     const [loading, setLoading] = useState<boolean>(true);
 
     // 从 localStorage 加载缓存 (保留此函数用于其他用途，虽然初始已加载)

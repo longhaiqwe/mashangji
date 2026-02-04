@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Crown, Sparkles, Check, X, TrendingUp, Mic, Star } from 'lucide-react';
+import { Crown, Sparkles, Check, X, TrendingUp, Mic, Star, RotateCcw, Loader2 } from 'lucide-react';
+import { useSubscription } from '../context/SubscriptionContext';
 
 interface ProUpgradeModalProps {
     isOpen: boolean;
@@ -8,8 +9,25 @@ interface ProUpgradeModalProps {
 }
 
 const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) => {
-    const handlePurchase = () => {
-        alert('Pro 订阅功能开发中，敬请期待！');
+    const { purchase, restore, loading, priceString, isPro } = useSubscription();
+
+    const handlePurchase = async () => {
+        if (loading) return;
+        try {
+            await purchase();
+            onClose();
+        } catch (e) {
+            // Error handling is inside context
+        }
+    };
+
+    const handleRestore = async () => {
+        if (loading) return;
+        try {
+            await restore();
+        } catch (e) {
+            // Error handling is inside context
+        }
     };
 
     const benefits = [
@@ -91,7 +109,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
                                     transition={{ delay: 0.5 }}
                                     className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg"
                                 >
-                                    PRO
+                                    {isPro ? '已开通' : 'PRO'}
                                 </motion.div>
                             </motion.div>
 
@@ -152,7 +170,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
                                 </div>
                                 <p className="text-amber-200/60 text-xs mb-1">年度会员</p>
                                 <div className="flex justify-center items-baseline gap-1">
-                                    <span className="text-2xl font-bold text-white">¥98</span>
+                                    <span className="text-2xl font-bold text-white">{priceString}</span>
                                     <span className="text-white/40 text-sm">/年</span>
                                 </div>
                                 <p className="text-white/30 text-[10px] mt-2 line-through">原价 ¥198/年</p>
@@ -160,15 +178,26 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
 
                             <button
                                 onClick={handlePurchase}
-                                className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 text-slate-900 font-bold text-lg shadow-[0_0_30px_rgba(245,158,11,0.3)] hover:shadow-[0_0_50px_rgba(245,158,11,0.5)] transition-shadow active:scale-[0.98] flex items-center justify-center gap-2 relative overflow-hidden group"
+                                disabled={loading || isPro}
+                                className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 text-slate-900 font-bold text-lg shadow-[0_0_30px_rgba(245,158,11,0.3)] hover:shadow-[0_0_50px_rgba(245,158,11,0.5)] transition-shadow active:scale-[0.98] flex items-center justify-center gap-2 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <span className="relative z-10 flex items-center gap-2">
-                                    <Crown className="w-5 h-5 fill-slate-900" />
-                                    立即升级 Pro
+                                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Crown className="w-5 h-5 fill-slate-900" />}
+                                    {isPro ? '您已是尊贵会员' : '立即升级 Pro'}
                                 </span>
 
                                 {/* Shine Effect */}
-                                <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent z-0" />
+                                {!isPro && <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent z-0" />}
+                            </button>
+
+                            {/* Restore Button */}
+                            <button
+                                onClick={handleRestore}
+                                disabled={loading}
+                                className="w-full mt-3 py-2 text-white/40 text-xs hover:text-white/60 transition-colors flex items-center justify-center gap-1"
+                            >
+                                <RotateCcw size={12} />
+                                恢复购买
                             </button>
 
                             <p className="text-white/20 text-[10px] text-center mt-4">

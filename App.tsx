@@ -22,6 +22,8 @@ import { useParticleEffect } from './components/ui/ParticleEffect';
 import { useVoiceTrial } from './hooks/useVoiceTrial';
 import TrialExhaustedModal from './components/TrialExhaustedModal';
 
+
+
 // 页面层级定义 - 用于决定转场动画方向
 const PAGE_LEVEL: { [key in ViewState]: number } = {
   [ViewState.LOGIN]: 0,
