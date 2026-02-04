@@ -22,8 +22,15 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
 
   // 判断是否为深色主题
   const isDarkTheme = themeId === 'black' || themeId === 'rich';
-  // 默认使用浅色背景
-  const bgClass = 'bg-light-bg-primary';
+  const bgClass = isDarkTheme ? 'bg-dark-bg-primary' : 'bg-light-bg-primary';
+  const textPrimary = isDarkTheme ? 'text-white' : 'text-slate-900';
+  const textSecondary = isDarkTheme ? 'text-slate-400' : 'text-slate-500';
+  const cardSurface = isDarkTheme
+    ? 'bg-dark-bg-secondary/70 border border-luxury-gold-500/10'
+    : 'bg-white/90 border border-amber-100';
+  const tooltipSurface = isDarkTheme
+    ? 'bg-slate-800 border-slate-600'
+    : 'bg-white border-amber-100';
 
   // Helper: Get start and end of the week (Monday based)
   const getWeekRange = (d: Date) => {
@@ -391,18 +398,20 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
     return { title, description, type, thisWeekPnL, lastWeekPnL };
   }, [records]); // Re-calc when records change
 
-  // 颜色常量（固定使用浅色主题配色）
+  // 颜色常量
   const COLOR_WIN = '#f43f5e';
   const COLOR_LOSS = '#10b981';
-  const COLOR_AXIS = '#cbd5e1';
-  const COLOR_TEXT = '#64748b';
-  const COLOR_GRID = '#f1f5f9';
-
-  const textPrimary = 'text-dark-bg-primary';
-  const textSecondary = 'text-slate-500';
+  const COLOR_AXIS = isDarkTheme ? 'rgba(255,255,255,0.25)' : '#e6d8b4';
+  const COLOR_TEXT = isDarkTheme ? '#94a3b8' : '#6b7280';
+  const COLOR_GRID = isDarkTheme ? 'rgba(255,255,255,0.06)' : '#f6ead1';
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className={`relative flex flex-col h-full ${bgClass} overflow-hidden`}>
+      {/* Ambient gold glow */}
+      <div className={`absolute -top-24 -right-16 w-64 h-64 rounded-full blur-3xl ${isDarkTheme ? 'bg-luxury-gold-500/10' : 'bg-amber-200/40'}`} />
+      <div className={`absolute -bottom-28 -left-16 w-72 h-72 rounded-full blur-3xl ${isDarkTheme ? 'bg-win-crimson/10' : 'bg-rose-200/40'}`} />
+
+      <div className="relative z-10 flex flex-col h-full">
       {/* ============ 顶部区域 ============ */}
       <motion.div
         className="safe-top px-6 pb-4 flex-shrink-0 z-10"
@@ -412,9 +421,10 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
       >
         {/* 标题和时间筛选器 */}
         <div className="mb-6 mt-4">
-          <h2 className={`font-bold text-2xl tracking-tight mb-5 ${textPrimary}`}>
+          <h2 className={`font-bold text-2xl tracking-tight ${textPrimary}`}>
             统计分析
           </h2>
+          <div className="mt-2 h-1 w-12 rounded-full bg-gold-gradient shadow-gold-glow-sm" />
 
           {/* Pill 按钮组 */}
           <div className="flex overflow-x-auto no-scrollbar space-x-2 pb-2 -mx-6 px-6">
@@ -431,7 +441,7 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
                     setTimeRange(range);
                     setCurrentDate(new Date());
                   }}
-                  className={timeRange === range ? 'bg-win-crimson' : ''}
+                  className={timeRange === range ? 'bg-gold-gradient text-dark-bg-primary shadow-gold-glow-sm' : ''}
                 >
                   {range === 'week' ? '周' : range === 'month' ? '月' : range === 'year' ? '年' : '全部'}
                 </PillButton>
@@ -459,7 +469,7 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
               <ChevronLeft className="w-5 h-5" />
             </button>
             <div className={`flex items-center font-bold text-base ${textPrimary}`}>
-              <Calendar className="w-4 h-4 mr-2 opacity-60" />
+              <Calendar className={`w-4 h-4 mr-2 ${isDarkTheme ? 'text-luxury-gold-400/80' : 'text-luxury-gold-600/80'}`} />
               {getDateLabel()}
             </div>
             <button
@@ -489,7 +499,7 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
             <Card
               variant={fortune.type === 'good' ? 'win' : fortune.type === 'bad' ? 'loss' : 'glass'}
               size="md"
-              className="relative overflow-hidden bg-white border-slate-100"
+              className={`relative overflow-hidden ${cardSurface} ring-1 ring-luxury-gold-500/10`}
               hover={false}
               delay={0}
             >
@@ -502,7 +512,13 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
 
               <div className="relative z-10">
                 <div className="flex items-center space-x-2 mb-2">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-white/10 text-white/70">
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                      isDarkTheme
+                        ? 'bg-luxury-gold-500/15 text-luxury-gold-400 border-luxury-gold-500/30'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}
+                  >
                     本周运势
                   </span>
                 </div>
@@ -533,7 +549,7 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
             <Card
               variant={stats.totalPnL >= 0 ? 'win' : 'loss'}
               size="md"
-              className="text-center bg-white border-slate-100"
+              className={`text-center ${cardSurface} ring-1 ring-luxury-gold-500/15`}
               hover={false}
               delay={0}
             >
@@ -555,9 +571,12 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35 }}
           >
-            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-              <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">场次</div>
-              <div className="text-2xl font-bold text-slate-800">{stats.totalGames} <span className="text-xs font-normal text-slate-400">场</span></div>
+            <div className={`${cardSurface} rounded-2xl p-4 shadow-sm`}>
+              <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${textSecondary}`}>场次</div>
+              <div className={`text-2xl font-bold ${textPrimary}`}>
+                {stats.totalGames}
+                <span className={`text-xs font-normal ${textSecondary} ml-1`}>场</span>
+              </div>
             </div>
           </motion.div>
 
@@ -567,11 +586,11 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-              <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-2">胜率</div>
-              <div className="text-2xl font-bold text-slate-800">
+            <div className={`${cardSurface} rounded-2xl p-4 shadow-sm`}>
+              <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${textSecondary}`}>胜率</div>
+              <div className={`text-2xl font-bold ${textPrimary}`}>
                 {stats.totalGames > 0 ? Math.round((stats.totalWins / stats.totalGames) * 100) : 0}
-                <span className="text-xs font-normal text-slate-400">%</span>
+                <span className={`text-xs font-normal ${textSecondary} ml-1`}>%</span>
               </div>
             </div>
           </motion.div>
@@ -587,12 +606,13 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
             <Card
               variant="glass"
               size="md"
-              className="min-h-[320px] pb-4 bg-white border-slate-100"
+              className={`min-h-[320px] pb-4 ${cardSurface}`}
               hover={false}
               delay={0}
             >
               <div className="flex items-center justify-between mb-6">
-                <h3 className={`font-bold text-sm ${textPrimary}`}>
+                <h3 className={`font-bold text-sm ${textPrimary} flex items-center gap-2`}>
+                  <span className="w-2 h-2 rounded-full bg-gold-gradient shadow-gold-glow-sm" />
                   {timeRange === 'week' ? '每日走势' : timeRange === 'month' ? '周度走势' : '月度走势'}
                 </h3>
                 <div className="flex items-center space-x-1">
@@ -627,11 +647,7 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
                         if (active && payload && payload.length) {
                           const val = payload[0].value as number;
                           return (
-                            <div className={`p-3 rounded-xl shadow-xl border text-xs ${
-                              isDarkTheme
-                                ? 'bg-slate-800 border-slate-600'
-                                : 'bg-white border-slate-100'
-                            }`}>
+                            <div className={`p-3 rounded-xl shadow-xl border text-xs ${tooltipSurface}`}>
                               <div className={`font-bold mb-1 ${textPrimary}`}>{payload[0].payload.label}</div>
                               <Amount amount={val} size="sm" showSign />
                             </div>
@@ -666,11 +682,14 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
           <Card
             variant="glass"
             size="md"
-            className="min-h-[280px] bg-white border-slate-100"
+            className={`min-h-[280px] ${cardSurface}`}
             hover={false}
             delay={0}
           >
-            <h3 className={`font-bold text-sm mb-4 ${textPrimary}`}>圈子盈亏分布</h3>
+            <h3 className={`font-bold text-sm mb-4 ${textPrimary} flex items-center gap-2`}>
+              <span className="w-2 h-2 rounded-full bg-gold-gradient shadow-gold-glow-sm" />
+              圈子盈亏分布
+            </h3>
             {stats.chartData.length > 0 ? (
               <div className="h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -690,11 +709,7 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
                         if (active && payload && payload.length) {
                           const val = payload[0].value as number;
                           return (
-                            <div className={`p-3 rounded-xl shadow-xl border text-xs ${
-                              isDarkTheme
-                                ? 'bg-slate-800 border-slate-600'
-                                : 'bg-white border-slate-100'
-                            }`}>
+                            <div className={`p-3 rounded-xl shadow-xl border text-xs ${tooltipSurface}`}>
                               <div className={`font-bold mb-1 ${textPrimary}`}>{payload[0].payload.name}</div>
                               <Amount amount={val} size="sm" showSign />
                             </div>
@@ -731,13 +746,13 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
             transition={{ delay: 0.55 }}
             className="mb-8"
           >
-            <Card
-              variant="glass"
-              size="md"
-              className="bg-white border-slate-100"
-              hover={false}
-              delay={0}
-            >
+          <Card
+            variant="glass"
+            size="md"
+            className={`${cardSurface}`}
+            hover={false}
+            delay={0}
+          >
               <div className="flex items-center space-x-2 mb-4">
                 <Zap className={`w-5 h-5 text-luxury-gold-500`} />
                 <h3 className={`font-bold text-base ${textPrimary}`}>{insights.year} 年度复盘</h3>
@@ -753,9 +768,9 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
                       whileHover={{ scale: 1.02 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <div className="text-xs text-slate-500 mb-1">最大单笔盈利</div>
+                      <div className={`text-xs mb-1 ${textSecondary}`}>最大单笔盈利</div>
                       <Amount amount={insights.maxWinAmount} size="md" showSign />
-                      <div className="text-[10px] text-slate-400 mt-1">{insights.maxWinDate}</div>
+                      <div className={`text-[10px] mt-1 ${textSecondary}`}>{insights.maxWinDate}</div>
                     </motion.div>
 
                     <motion.div
@@ -765,9 +780,9 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
                       whileHover={{ scale: 1.02 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <div className="text-xs text-slate-500 mb-1">最大单笔亏损</div>
+                      <div className={`text-xs mb-1 ${textSecondary}`}>最大单笔亏损</div>
                       <Amount amount={insights.maxLossAmount} size="md" showSign />
-                      <div className="text-[10px] text-slate-400 mt-1">{insights.maxLossDate}</div>
+                      <div className={`text-[10px] mt-1 ${textSecondary}`}>{insights.maxLossDate}</div>
                     </motion.div>
                   </div>
 
@@ -776,13 +791,13 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
                       <motion.div
                         key={i}
                         className={`text-xs px-3 py-2 rounded-lg flex items-start ${
-                          isDarkTheme ? 'bg-white/5 text-slate-300' : 'bg-slate-50 text-slate-600'
+                          isDarkTheme ? 'bg-white/5 text-slate-300' : 'bg-amber-50/60 text-slate-600'
                         }`}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.6 + i * 0.05 }}
                       >
-                        <span className="mr-2 mt-0.5 text-win-crimson font-bold">•</span>
+                        <span className="mr-2 mt-0.5 text-luxury-gold-500 font-bold">•</span>
                         {t}
                       </motion.div>
                     ))}
@@ -799,6 +814,7 @@ const Statistics: React.FC<StatisticsProps> = ({ records, circles, themeId = 'de
         )}
 
         <div className="h-20"></div>
+      </div>
       </div>
     </div>
   );
