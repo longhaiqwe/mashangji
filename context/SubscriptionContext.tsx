@@ -47,11 +47,11 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
 
                 await Purchases.setLogLevel({ level: LOG_LEVEL.DEBUG });
 
-                const info = await Purchases.getCustomerInfo();
+                const { customerInfo: info } = await Purchases.getCustomerInfo();
                 setCustomerInfo(info);
                 checkProStatus(info);
 
-                loadOfferings();
+                await loadOfferings();
             } catch (e) {
                 console.error('Failed to init RevenueCat:', e);
             } finally {
@@ -63,21 +63,35 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     const checkProStatus = (info: CustomerInfo) => {
-        // Check if the user has the "pro_access" entitlement
-        const isProMember = typeof info.entitlements.active['pro_access'] !== "undefined";
+        // Check if the user has the "mashangji Pro" entitlement (must match RevenueCat Dashboard)
+        // 调试日志：打印所有 entitlements 信息
+        console.log('=== RevenueCat Debug ===');
+        console.log('All entitlements:', JSON.stringify(info.entitlements, null, 2));
+        console.log('Active entitlements:', Object.keys(info.entitlements.active));
+        console.log('Looking for entitlement: mashangji Pro');
+
+        const isProMember = typeof info.entitlements.active['mashangji Pro'] !== "undefined";
+        console.log('isPro result:', isProMember);
+        console.log('========================');
+
         setIsPro(isProMember);
     };
 
     const loadOfferings = async () => {
         try {
             const offerings = await Purchases.getOfferings();
+            console.log('RevenueCat Offerings:', JSON.stringify(offerings, null, 2));
+
             if (offerings.current && offerings.current.availablePackages.length > 0) {
                 // Find the package we want to sell (Annual)
                 const annualPackage = offerings.current.availablePackages.find(
                     (pkg) => pkg.identifier === 'Annual'
                 ) || offerings.current.availablePackages[0]; // Fallback to first available
 
+                console.log('Selected Annual Package:', annualPackage);
                 setCurrentOffering(annualPackage);
+            } else {
+                console.warn('No current offering found in RevenueCat. Available offerings:', Object.keys(offerings.all));
             }
         } catch (e) {
             console.error('Error loading offerings:', e);
@@ -107,7 +121,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
             const { customerInfo } = await Purchases.restorePurchases();
             setCustomerInfo(customerInfo);
             checkProStatus(customerInfo);
-            if (typeof customerInfo.entitlements.active['pro_access'] !== "undefined") {
+            if (typeof customerInfo.entitlements.active['mashangji Pro'] !== "undefined") {
                 alert("恢复购买成功！");
             } else {
                 alert("未找到可恢复的购买记录。");

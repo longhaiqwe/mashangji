@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Crown, Mic, X, Sparkles } from 'lucide-react';
 import ProUpgradeModal from './ProUpgradeModal';
+import { useSubscription } from '../context/SubscriptionContext';
 
 interface TrialExhaustedModalProps {
     isOpen: boolean;
@@ -15,6 +16,21 @@ const TrialExhaustedModal: React.FC<TrialExhaustedModalProps> = ({
     onUpgrade,
 }) => {
     const [showProModal, setShowProModal] = useState(false);
+    const { isPro } = useSubscription();
+
+    // 使用 ref 存储 onClose，避免 useEffect 依赖项变化导致的问题
+    const onCloseRef = useRef(onClose);
+    useEffect(() => {
+        onCloseRef.current = onClose;
+    }, [onClose]);
+
+    // 当用户成为 Pro 会员后，自动关闭所有弹窗
+    useEffect(() => {
+        if (isPro && isOpen) {
+            setShowProModal(false);
+            onCloseRef.current();
+        }
+    }, [isPro, isOpen]);
 
     const handleUpgrade = () => {
         setShowProModal(true);

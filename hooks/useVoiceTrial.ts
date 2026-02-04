@@ -14,7 +14,7 @@ export interface UseVoiceTrialResult {
 }
 
 export const useVoiceTrial = (): UseVoiceTrialResult => {
-    const { isPro } = useSubscription();
+    const { isPro, loading: subscriptionLoading } = useSubscription();
     const [trialUsed, setTrialUsed] = useState<number>(() => {
         try {
             const cached = localStorage.getItem(VOICE_TRIAL_STORAGE_KEY);
@@ -24,7 +24,7 @@ export const useVoiceTrial = (): UseVoiceTrialResult => {
         }
     });
     // const [isPro, setIsPro] = useState<boolean>(false); // REMOVED
-    const [loading, setLoading] = useState<boolean>(true);
+    const [trialLoading, setTrialLoading] = useState<boolean>(true);
 
     // 从 localStorage 加载缓存 (保留此函数用于其他用途，虽然初始已加载)
     const loadFromCache = useCallback((): number => {
@@ -100,7 +100,7 @@ export const useVoiceTrial = (): UseVoiceTrialResult => {
     // 初始化：加载数据
     useEffect(() => {
         const init = async () => {
-            setLoading(true);
+            setTrialLoading(true);
 
             // 先从缓存加载（快速响应）
             const cached = loadFromCache();
@@ -115,7 +115,7 @@ export const useVoiceTrial = (): UseVoiceTrialResult => {
                 saveToCache(finalValue);
             }
 
-            setLoading(false);
+            setTrialLoading(false);
         };
 
         init();
@@ -133,6 +133,9 @@ export const useVoiceTrial = (): UseVoiceTrialResult => {
 
     const remaining = Math.max(0, VOICE_TRIAL_LIMIT - trialUsed);
     const canUseVoice = isPro || trialUsed < VOICE_TRIAL_LIMIT;
+
+    // loading 需要同时等待订阅状态和试用次数加载完成
+    const loading = subscriptionLoading || trialLoading;
 
     return {
         trialUsed,
