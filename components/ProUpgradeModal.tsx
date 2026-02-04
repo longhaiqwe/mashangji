@@ -144,8 +144,6 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
                                 >
                                     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${benefit.color} p-0.5 shadow-lg`}>
                                         <div className="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center">
-                                            <benefit.icon className={`w-6 h-6 text-transparent bg-clip-text bg-gradient-to-br ${benefit.color} stroke-[url(#gradient-${index})]`} />
-                                            {/* Note: SVG gradient for stroke needs defs, but Lucide icons use stroke color. For simplicity we use text color or separate SVG. Using text-white for now */}
                                             <benefit.icon className="w-6 h-6 text-white" />
                                         </div>
                                     </div>
@@ -173,7 +171,8 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
                                     <span className="text-2xl font-bold text-white">{priceString}</span>
                                     <span className="text-white/40 text-sm">/年</span>
                                 </div>
-                                <p className="text-white/30 text-[10px] mt-2 line-through">原价 ¥198/年</p>
+                                <p className="text-white/30 text-[10px] mt-2 line-through">原价 ¥18/年</p>
+                                <p className="text-amber-400/80 text-[10px] mt-1">🎊 早鸟 · 新春特惠价</p>
                             </div>
 
                             <button
