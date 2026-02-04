@@ -479,6 +479,11 @@ const AddRecord: React.FC<AddRecordProps> = ({
     setLastImportText(textToAnalyze);
     setFeedback(null);
     try {
+      // 语音模式下，开始分析即增加使用计数（无论成功失败）
+      if (importMode === 'voice') {
+        incrementUsage();
+      }
+
       const circleNames = circles.map(c => c.name);
       const results = await analyzeText(textToAnalyze, circleNames);
       if (results.length === 0) {
@@ -502,17 +507,9 @@ const AddRecord: React.FC<AddRecordProps> = ({
         setImportText('');
         setParsedResults([]);
         setShowImportModal(false);
-        // 语音模式下成功识别，增加试用计数
-        if (importMode === 'voice') {
-          incrementUsage();
-        }
       } else {
         setParsedResults(results);
         setImportText('');
-        // 语音模式下成功识别多条，增加试用计数
-        if (importMode === 'voice') {
-          incrementUsage();
-        }
       }
     } catch (err: any) {
       console.error("Analysis Error:", err);
