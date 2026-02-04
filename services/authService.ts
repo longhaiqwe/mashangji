@@ -265,11 +265,15 @@ export const authService = {
 
 // Helper to transform Supabase user to App user
 const mapSupabaseUser = (sbUser: any): User => {
+  const metadata = sbUser.user_metadata || {};
+  // Prioritize Apple ID's 'full_name' or 'name', then explicit 'username', then 'preferred_username'
+  const displayName = metadata.full_name || metadata.name || metadata.username || metadata.preferred_username;
+
   return {
     id: sbUser.id,
-    // Use metadata username if available, otherwise fallback to email prefix
-    username: sbUser.user_metadata?.username || sbUser.email?.split('@')[0] || 'User',
-    avatar: sbUser.user_metadata?.avatar_url
+    // use found name, or fallback to email prefix, or default to '用户'
+    username: displayName || sbUser.email?.split('@')[0] || '用户',
+    avatar: metadata.avatar_url
   };
 };
 

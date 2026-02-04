@@ -8,8 +8,39 @@ interface ProUpgradeModalProps {
     onClose: () => void;
 }
 
+const LANTERN_FESTIVAL_END_UTC = Date.UTC(2026, 2, 3, 15, 59, 59); // 2026-03-03 23:59:59 (GMT+8)
+
+const getCountdown = (nowMs: number, endMs: number) => {
+    const remainingMs = Math.max(0, endMs - nowMs);
+    const totalSeconds = Math.floor(remainingMs / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    return {
+        remainingMs,
+        days,
+        hours,
+        minutes,
+        seconds
+    };
+};
+
 const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) => {
     const { purchase, restore, loading, priceString, isPro } = useSubscription();
+    const [countdown, setCountdown] = React.useState(() =>
+        getCountdown(Date.now(), LANTERN_FESTIVAL_END_UTC)
+    );
+    const [showDeadline, setShowDeadline] = React.useState(false);
+
+    React.useEffect(() => {
+        if (!isOpen) return;
+        const tick = () => setCountdown(getCountdown(Date.now(), LANTERN_FESTIVAL_END_UTC));
+        tick();
+        const timer = window.setInterval(tick, 1000);
+        return () => window.clearInterval(timer);
+    }, [isOpen]);
 
     const handlePurchase = async () => {
         if (loading) return;
@@ -46,7 +77,7 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
         {
             icon: Crown,
             title: '尊贵会员标识',
-            desc: '专属黑金主题，彰显不凡牌品',
+            desc: '专属黑金主题，彰显不凡牌品 (开发中)',
             color: 'from-purple-400 to-indigo-500'
         }
     ];
@@ -87,8 +118,9 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
                     </div>
 
                     <div className="relative z-10 flex flex-col min-h-full pb-safe">
-                        {/* Hero Section */}
-                        <div className="pt-20 pb-10 px-6 flex flex-col items-center text-center">
+                        <div className="w-full max-w-[420px] mx-auto px-6">
+                            {/* Hero Section */}
+                            <div className="pt-14 pb-6 flex flex-col items-center text-center">
                             <motion.div
                                 initial={{ scale: 0.5, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
@@ -130,29 +162,30 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
                             >
                                 升级到 Pro 会员，体验 AI 智能记账的极致效率与数据洞察
                             </motion.p>
-                        </div>
+                            </div>
 
-                        {/* Benefits List */}
-                        <div className="flex-1 px-4 space-y-4">
-                            {benefits.map((benefit, index) => (
-                                <motion.div
-                                    key={index}
-                                    initial={{ x: -50, opacity: 0 }}
-                                    animate={{ x: 0, opacity: 1 }}
-                                    transition={{ delay: 0.4 + index * 0.1 }}
-                                    className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-4 flex items-center gap-4 group hover:bg-white/10 transition-colors"
-                                >
-                                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${benefit.color} p-0.5 shadow-lg`}>
-                                        <div className="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center">
-                                            <benefit.icon className="w-6 h-6 text-white" />
+                            {/* Benefits List */}
+                            <div className="space-y-2">
+                                {benefits.map((benefit, index) => (
+                                    <motion.div
+                                        key={index}
+                                        initial={{ x: -50, opacity: 0 }}
+                                        animate={{ x: 0, opacity: 1 }}
+                                        transition={{ delay: 0.4 + index * 0.1 }}
+                                        className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-3 flex items-center gap-3 group hover:bg-white/10 transition-colors"
+                                    >
+                                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${benefit.color} p-0.5 shadow-lg`}>
+                                            <div className="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center">
+                                                <benefit.icon className="w-5 h-5 text-white" />
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-white font-bold text-base mb-1">{benefit.title}</h3>
-                                        <p className="text-white/50 text-xs leading-relaxed">{benefit.desc}</p>
-                                    </div>
-                                </motion.div>
-                            ))}
+                                        <div className="flex-1">
+                                            <h3 className="text-white font-bold text-sm mb-0.5">{benefit.title}</h3>
+                                            <p className="text-white/50 text-[11px] leading-snug">{benefit.desc}</p>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
                         </div>
 
                         {/* Pricing & CTA */}
@@ -160,48 +193,92 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
                             initial={{ y: 50, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             transition={{ delay: 0.7 }}
-                            className="mt-8 p-6 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent"
+                            className="mt-3 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent"
                         >
-                            <div className="bg-white/5 rounded-2xl p-4 mb-4 border border-amber-500/20 text-center relative overflow-hidden">
-                                <div className="absolute top-0 right-0 bg-amber-500 text-slate-900 text-[10px] font-bold px-2 py-1 rounded-bl-lg">
-                                    推荐
-                                </div>
-                                <p className="text-amber-200/60 text-xs mb-1">年度会员</p>
-                                <div className="flex justify-center items-baseline gap-1">
-                                    <span className="text-2xl font-bold text-white">{priceString}</span>
-                                    <span className="text-white/40 text-sm">/年</span>
-                                </div>
-                                <p className="text-white/30 text-[10px] mt-2 line-through">原价 ¥18/年</p>
-                                <p className="text-amber-400/80 text-[10px] mt-1">🎊 早鸟 · 新春特惠价</p>
+                            <div className="w-full max-w-[420px] mx-auto px-6 pt-3 pb-16">
+                                <div className="bg-white/5 rounded-2xl p-4 mb-4 border border-amber-500/20 text-center relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 bg-amber-500 text-slate-900 text-[10px] font-bold px-2 py-1 rounded-bl-lg">
+                                        推荐
+                                    </div>
+                                    <div className="mb-1 flex items-center justify-center gap-2 text-[11px]">
+                                        <span className="text-amber-200/60">年度会员</span>
+                                        <span className="text-amber-400/80">🎊 早鸟 · 新春特惠价</span>
+                                    </div>
+                                    <div className="flex flex-wrap items-baseline justify-center gap-x-2 gap-y-1">
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="text-2xl font-bold text-white">{priceString}</span>
+                                            <span className="text-white/40 text-sm">/年</span>
+                                        </div>
+                                        <span className="inline-flex items-center rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-white/80 line-through decoration-white/70">
+                                            原价 ¥18/年
+                                        </span>
+                                    </div>
+
+                                {countdown.remainingMs > 0 ? (
+                                    <div className="mt-2 cursor-pointer select-none" onClick={() => setShowDeadline((prev) => !prev)}>
+                                        <div className="flex items-center justify-center">
+                                            <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-100/90">
+                                                <Sparkles className="h-3 w-3 text-amber-300" />
+                                                早鸟价倒计时
+                                                <span className="text-white/50 font-normal">点击查看截止</span>
+                                            </div>
+                                        </div>
+                                        <div className="mt-1.5 flex items-center justify-center gap-2 text-white/90">
+                                            {[
+                                                { value: countdown.days, label: '天' },
+                                                { value: countdown.hours, label: '时' },
+                                                { value: countdown.minutes, label: '分' },
+                                                { value: countdown.seconds, label: '秒' }
+                                            ].map((item) => (
+                                                <div key={item.label} className="flex items-end gap-1">
+                                                    <div className="min-w-[28px] rounded-lg bg-white/10 px-2 py-1 text-xs font-bold tabular-nums text-white shadow-[0_0_12px_rgba(245,158,11,0.15)]">
+                                                        {String(item.value).padStart(2, '0')}
+                                                    </div>
+                                                    <span className="text-[10px] text-white/50">{item.label}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {showDeadline && (
+                                            <p className="mt-1 text-[10px] text-white/35">
+                                                截止 2026-03-03 23:59 (GMT+8)
+                                            </p>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <p className="mt-3 text-[11px] font-semibold text-amber-200/80">
+                                        早鸟优惠已结束
+                                    </p>
+                                )}
                             </div>
 
-                            <button
-                                onClick={handlePurchase}
-                                disabled={loading || isPro}
-                                className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 text-slate-900 font-bold text-lg shadow-[0_0_30px_rgba(245,158,11,0.3)] hover:shadow-[0_0_50px_rgba(245,158,11,0.5)] transition-shadow active:scale-[0.98] flex items-center justify-center gap-2 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <span className="relative z-10 flex items-center gap-2">
-                                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Crown className="w-5 h-5 fill-slate-900" />}
-                                    {isPro ? '您已是尊贵会员' : '立即升级 Pro'}
-                                </span>
+                                <button
+                                    onClick={handlePurchase}
+                                    disabled={loading || isPro}
+                                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-600 text-slate-900 font-bold text-lg shadow-[0_0_30px_rgba(245,158,11,0.3)] hover:shadow-[0_0_50px_rgba(245,158,11,0.5)] transition-shadow active:scale-[0.98] flex items-center justify-center gap-2 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <span className="relative z-10 flex items-center gap-2">
+                                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Crown className="w-5 h-5 fill-slate-900" />}
+                                        {isPro ? '您已是尊贵会员' : '立即升级 Pro'}
+                                    </span>
 
-                                {/* Shine Effect */}
-                                {!isPro && <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent z-0" />}
-                            </button>
+                                    {/* Shine Effect */}
+                                    {!isPro && <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent z-0" />}
+                                </button>
 
-                            {/* Restore Button */}
-                            <button
-                                onClick={handleRestore}
-                                disabled={loading}
-                                className="w-full mt-3 py-2 text-white/40 text-xs hover:text-white/60 transition-colors flex items-center justify-center gap-1"
-                            >
-                                <RotateCcw size={12} />
-                                恢复购买
-                            </button>
+                                {/* Restore Button */}
+                                <button
+                                    onClick={handleRestore}
+                                    disabled={loading}
+                                    className="w-full mt-2 py-2 text-white/40 text-xs hover:text-white/60 transition-colors flex items-center justify-center gap-1"
+                                >
+                                    <RotateCcw size={12} />
+                                    恢复购买
+                                </button>
 
-                            <p className="text-white/20 text-[10px] text-center mt-4">
-                                点击上方按钮即表示同意《用户协议》及《隐私政策》
-                            </p>
+                                <p className="text-white/20 text-[10px] text-center mt-4">
+                                    点击上方按钮即表示同意《用户协议》及《隐私政策》
+                                </p>
+                            </div>
                         </motion.div>
                     </div>
                 </motion.div>
