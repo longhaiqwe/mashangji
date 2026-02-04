@@ -467,6 +467,7 @@ const App: React.FC = () => {
             onNavigate={changeView}
             hasRecords={hasRecordsInCircle}
             onBack={() => changeView(ViewState.SETTINGS)}
+            themeId={preferences.themeId}
           />
         );
 
