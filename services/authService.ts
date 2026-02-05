@@ -362,6 +362,28 @@ export const authService = {
         if (error) {
           console.error(`[AuthService] Update profile error (attempt ${retryCount + 1}):`, error);
 
+          // CRITICAL: VERIFY RESULT BEFORE RETRYING
+          // Sometimes the server successfully engages the change, but the response is lost/timed out (status 0).
+          // We check the server state directly. If the name matches, we declare victory.
+          if (updates.username) {
+            try {
+              const { data: freshData } = await supabase.auth.getUser();
+              if (freshData?.user) {
+                // Map the fresh user to get the resolved username (handles metadata priority)
+                const freshAppUser = mapSupabaseUser(freshData.user);
+                if (freshAppUser.username === updates.username) {
+                  console.log('[AuthService] Update reported error but verification confirmed SUCCESS. Ignoring error.');
+
+                  // Update local fallback to match
+                  persistLocally(freshData.user.id, updates.username);
+                  return freshAppUser;
+                }
+              }
+            } catch (validationError) {
+              console.warn('[AuthService] Verification check failed:', validationError);
+            }
+          }
+
           // Check for retryable error
           const isRetryable =
             error.name === 'AuthRetryableFetchError' ||

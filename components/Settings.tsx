@@ -464,8 +464,8 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
 
         <div className="px-4 py-5 space-y-5 overflow-y-auto safe-top safe-bottom">
           {/* User Profile Card */}
-          <Card variant={cardVariant} className="p-4 flex items-center justify-between">
-            <div className="flex items-center space-x-4 flex-1">
+          <Card variant={cardVariant} className="p-4 flex items-center">
+            <div className="flex items-center space-x-4">
               <div className="relative flex-shrink-0">
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${userIconBg}`}>
                   <UserCircle className={`w-7 h-7 ${userIconColor}`} />
@@ -477,7 +477,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
                 )}
               </div>
 
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h3 className={`font-bold text-lg tracking-wide truncate ${textPrimary} max-w-[150px]`}>
                     {displayUsername}
@@ -501,7 +501,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
               variant="secondary"
               onClick={handleLogout}
               icon={<LogOut className="w-3 h-3" />}
-              className="!rounded-lg !px-3 !py-1 text-[10px] h-7 flex-shrink-0 ml-6"
+              className="!rounded-lg !px-3 !py-1 text-[10px] h-7 flex-shrink-0 ml-4"
             >
               退出
             </Button>
