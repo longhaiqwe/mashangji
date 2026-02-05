@@ -54,7 +54,6 @@ const AddRecord: React.FC<AddRecordProps> = ({
   });
   const [note, setNote] = useState<string>('');
   const [error, setError] = useState<string>('');
-  const [isNoteExpanded, setIsNoteExpanded] = useState(false);
 
   // AI Import State
   const [showImportModal, setShowImportModal] = useState(initialAutoStartVoice);
@@ -896,15 +895,15 @@ const AddRecord: React.FC<AddRecordProps> = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            {/* Win/Loss Switch - Pill Shape */}
-            <div className={`flex flex-col flex-none justify-center ${inputBg} rounded-xl p-1 w-20 border ${borderClass}`}>
+            {/* Win/Loss Switch - Horizontal */}
+            <div className={`flex flex-none items-center ${inputBg} rounded-xl p-1 w-24 border ${borderClass}`}>
               <motion.button
                 type="button"
                 onClick={() => {
                   setIsWin(true);
                   amountInputRef.current?.focus();
                 }}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all mb-1 ${isWin
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${isWin
                   ? 'bg-win-crimson text-white shadow-[0_0_20px_rgba(220,20,60,0.4)]'
                   : `${textSecondary} hover:text-win-crimson/70`
                   }`}
@@ -930,65 +929,63 @@ const AddRecord: React.FC<AddRecordProps> = ({
               </motion.button>
             </div>
 
-            {/* Amount + Note (Side-by-side) */}
-            <div className="flex-1 flex items-stretch gap-2">
-              <div
-                className={`relative transition-all duration-200 ${isNoteExpanded ? 'flex-[1.6]' : 'flex-[2.4]'}`}
+            {/* Amount Input - Prominent */}
+            <div className="flex-1 relative group">
+              <span
+                className={`absolute left-4 top-1/2 -translate-y-1/2 text-xl font-bold font-mono-numeric transition-colors ${isWin ? 'text-win-crimson drop-shadow-[0_0_12px_rgba(220,20,60,0.5)]' : 'text-loss-emerald drop-shadow-[0_0_12px_rgba(0,200,83,0.5)]'
+                  }`}
               >
-                <span
-                  className={`absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold font-mono-numeric transition-colors ${isWin ? 'text-win-crimson drop-shadow-[0_0_15px_rgba(220,20,60,0.5)]' : 'text-loss-emerald drop-shadow-[0_0_15px_rgba(0,200,83,0.5)]'
-                    }`}
-                >
-                  ¥
-                </span>
-                <motion.input
-                  ref={amountInputRef}
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={handleAmountChange}
-                  className={`w-full h-full text-right pr-4 py-3 pl-12 ${inputBg} rounded-xl text-4xl font-bold outline-none border-2 transition-all font-mono-numeric ${error
-                    ? 'border-rose-500/50 text-rose-500'
-                    : `${borderClass} focus:${isWin ? 'border-win-crimson' : 'border-loss-emerald'}/50 focus:shadow-[0_0_30px_rgba(${isWin ? '220,20,60' : '0,200,83'},0.2)] ${isWin ? 'text-win-crimson' : 'text-loss-emerald'}`
-                    } ${textPrimary} placeholder:text-slate-300`}
-                  autoFocus={!initialRecord}
-                  whileFocus={{ scale: 1.01 }}
-                />
-              </div>
+                ¥
+              </span>
+              <motion.input
+                ref={amountInputRef}
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00"
+                value={amount}
+                onChange={handleAmountChange}
+                className={`w-full h-full text-right pr-4 py-2.5 pl-10 ${inputBg} rounded-lg text-3xl font-bold outline-none border-2 transition-all font-mono-numeric ${error
+                  ? 'border-rose-500/50 text-rose-500'
+                  : `${borderClass} focus:${isWin ? 'border-win-crimson' : 'border-loss-emerald'}/50 focus:shadow-[0_0_30px_rgba(${isWin ? '220,20,60' : '0,200,83'},0.2)] ${isWin ? 'text-win-crimson' : 'text-loss-emerald'}`
+                  } ${textPrimary} placeholder:text-slate-300`}
+                autoFocus={!initialRecord}
+                whileFocus={{ scale: 1.01 }}
+              />
+            </div>
+          </motion.div>
 
-              <div
-                className={`relative transition-all duration-200 ${isNoteExpanded ? 'flex-[1.2]' : 'flex-[1]'} min-w-[92px]`}
-              >
-                <div className={`absolute left-3 top-1/2 -translate-y-1/2 ${textSecondary}`}>
-                  <FileText className="w-4 h-4" />
-                </div>
-                <motion.input
-                  type="text"
-                  placeholder="备注"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  onFocus={() => setIsNoteExpanded(true)}
-                  onBlur={() => setIsNoteExpanded(false)}
-                  maxLength={20}
-                  className={`w-full h-full py-3 pl-10 pr-9 ${inputBg} rounded-xl ${borderClass} text-sm outline-none focus:border-luxury-gold-500/50 focus:shadow-[0_0_20px_rgba(212,175,55,0.15)] transition-all ${textPrimary} placeholder:text-slate-400`}
-                  whileFocus={{ scale: 1.01 }}
-                />
-                <motion.button
-                  type="button"
-                  onClick={() => {
-                    setIsNoteExpanded(true);
-                    setImportMode('voice');
-                    setShowImportModal(true);
-                    toggleListening();
-                  }}
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full ${textSecondary} hover:text-luxury-gold-500 hover:bg-luxury-gold-500/10 transition-colors`}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Mic size={16} />
-                </motion.button>
+          {/* Row 3: Note */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className="relative">
+              <div className={`absolute left-4 top-1/2 -translate-y-1/2 ${textSecondary}`}>
+                <FileText className="w-5 h-5" />
               </div>
+              <motion.input
+                type="text"
+                placeholder="备注 (选填)"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                maxLength={20}
+                className={`w-full py-3 pl-12 pr-12 ${inputBg} rounded-lg ${borderClass} text-sm outline-none focus:border-luxury-gold-500/50 focus:shadow-[0_0_20px_rgba(212,175,55,0.15)] transition-all ${textPrimary} placeholder:text-slate-400`}
+                whileFocus={{ scale: 1.01 }}
+              />
+              <motion.button
+                type="button"
+                onClick={() => {
+                  setImportMode('voice');
+                  setShowImportModal(true);
+                  toggleListening();
+                }}
+                className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full ${textSecondary} hover:text-luxury-gold-500 hover:bg-luxury-gold-500/10 transition-colors`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Mic size={18} />
+              </motion.button>
             </div>
           </motion.div>
 
