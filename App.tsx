@@ -224,10 +224,11 @@ const App: React.FC = () => {
 
     if (!silent) setIsLoading(true);
     try {
+      // 默认启用 throwOnError，确保加载失败时能被捕获
       const [loadedRecords, loadedCircles, loadedPrefs] = await Promise.all([
-        Storage.fetchRecords(user.id, { throwOnError: strict }),
-        Storage.fetchCircles(user.id, { throwOnError: strict }),
-        Storage.fetchPreferences(user.id, { throwOnError: strict })
+        Storage.fetchRecords(user.id, { throwOnError: true }),
+        Storage.fetchCircles(user.id, { throwOnError: true }),
+        Storage.fetchPreferences(user.id, { throwOnError: true })
       ]);
 
       setRecords(loadedRecords);
@@ -237,6 +238,10 @@ const App: React.FC = () => {
       return true;
     } catch (error) {
       console.error("Failed to sync data", error instanceof Error ? error.message : JSON.stringify(error));
+      // 非静默模式下提示用户，避免用户看到空白页面以为数据丢失
+      if (!silent) {
+        alert('数据加载失败，请检查网络后下拉刷新重试。您的数据仍安全保存在云端。');
+      }
       return false;
     } finally {
       if (!silent) setIsLoading(false);

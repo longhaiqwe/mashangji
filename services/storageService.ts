@@ -279,17 +279,18 @@ export const syncCircles = async (circles: Circle[], userId: string): Promise<vo
     // 2. Delete circles not in the new list
     const currentIds = circles.map(c => c.id);
 
-    const query = supabase
+    // 构建删除查询 - 注意: Supabase 查询构建器是不可变的，必须赋值返回值
+    let deleteQuery = supabase
       .from('circles')
       .delete()
       .eq('user_id', userId);
 
     if (currentIds.length > 0) {
-      const filterValue = `(${currentIds.map(id => `"${id}"`).join(',')})`;
-      query.filter('id', 'not.in', filterValue);
+      // 使用 .not() 方法排除需要保留的圈子，必须赋值回 deleteQuery
+      deleteQuery = deleteQuery.not('id', 'in', `(${currentIds.join(',')})`);
     }
 
-    const { error: deleteError } = await query;
+    const { error: deleteError } = await deleteQuery;
     if (deleteError) throw deleteError;
   });
 };
