@@ -9,7 +9,7 @@ interface SubscriptionContextType {
     currentOffering: PurchasesPackage | null; // The annual package we want to display
     customerInfo: CustomerInfo | null;
     loading: boolean;
-    purchase: () => Promise<void>;
+    purchase: () => Promise<boolean>;
     restore: () => Promise<void>;
     priceString: string;
 }
@@ -101,18 +101,20 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     const purchase = async () => {
         if (!currentOffering) {
             alert('暂时无法获取商品信息，请稍后再试');
-            return;
+            return false;
         }
 
         try {
             const { customerInfo } = await Purchases.purchasePackage({ aPackage: currentOffering });
             setCustomerInfo(customerInfo);
             checkProStatus(customerInfo);
+            return true;
         } catch (e: any) {
             if (!e.userCancelled) {
                 console.error('Purchase error:', e);
                 alert(`购买失败: ${e.message}`);
             }
+            return false;
         }
     };
 

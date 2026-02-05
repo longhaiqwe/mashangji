@@ -9,6 +9,7 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
+import { useSubscription } from '../context/SubscriptionContext';
 
 interface SettingsProps {
   onNavigate: (view: ViewState) => void;
@@ -21,6 +22,7 @@ interface SettingsProps {
 
 const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClearData, onDataRefresh, themeId = 'default' }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { isPro } = useSubscription();
 
   // State
   const [isExporting, setIsExporting] = React.useState(false);
@@ -432,8 +434,15 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
         {/* User Profile Card */}
         <Card variant={cardVariant} className="p-4 flex items-center">
           <div className="flex items-center space-x-4">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${userIconBg}`}>
-              <UserCircle className={`w-7 h-7 ${userIconColor}`} />
+            <div className="relative">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${userIconBg}`}>
+                <UserCircle className={`w-7 h-7 ${userIconColor}`} />
+              </div>
+              {isPro && (
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-700 shadow-gold-glow-sm ring-2 ring-white/70 flex items-center justify-center">
+                  <Crown className="w-3 h-3 text-slate-900" strokeWidth={2.2} />
+                </div>
+              )}
             </div>
             <div>
               <div className="flex items-center gap-3">
@@ -464,7 +473,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
           <div className="relative p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                <Crown className="w-6 h-6 text-white text-shadow-sm" />
+                <span className="text-white text-xs font-black tracking-widest">PRO</span>
               </div>
               <div className="text-left">
                 <h3 className="text-white font-bold text-base flex items-center gap-1">

@@ -54,6 +54,7 @@ const AddRecord: React.FC<AddRecordProps> = ({
   });
   const [note, setNote] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [isNoteExpanded, setIsNoteExpanded] = useState(false);
 
   // AI Import State
   const [showImportModal, setShowImportModal] = useState(initialAutoStartVoice);
@@ -625,6 +626,9 @@ const AddRecord: React.FC<AddRecordProps> = ({
     e.preventDefault();
     if (!amount) {
       setError('请输入金额');
+      setTimeout(() => {
+        keepAmountFocus();
+      }, 50);
       return;
     }
 
@@ -642,6 +646,9 @@ const AddRecord: React.FC<AddRecordProps> = ({
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount)) {
       setError('金额必须是数字');
+      setTimeout(() => {
+        keepAmountFocus();
+      }, 50);
       return;
     }
 
@@ -666,6 +673,43 @@ const AddRecord: React.FC<AddRecordProps> = ({
       setAmount(val);
       setError('');
     }
+  };
+
+  const keepAmountFocus = () => {
+    if (!amountInputRef.current) return;
+    amountInputRef.current.focus();
+    const len = amountInputRef.current.value.length;
+    try {
+      amountInputRef.current.setSelectionRange(len, len);
+    } catch {
+      // Some platforms may not support selection range on certain inputs.
+    }
+  };
+
+  const handleCircleSelect = (id: string, preserveFocus?: boolean) => {
+    const shouldPreserve =
+      preserveFocus ??
+      (typeof document !== 'undefined' && document.activeElement === amountInputRef.current);
+    setCircleId(id);
+    if (shouldPreserve) {
+      requestAnimationFrame(() => {
+        keepAmountFocus();
+      });
+    }
+  };
+
+  const handleCirclePointerDown = (e: any, id: string) => {
+    // Prevent the circle button from stealing focus from the amount input.
+    if (e?.preventDefault) e.preventDefault();
+    handleCircleSelect(id, true);
+  };
+
+  const handleDateChange = (value: string) => {
+    setDate(value);
+    // Give the native date picker a moment to close before restoring focus.
+    setTimeout(() => {
+      keepAmountFocus();
+    }, 50);
   };
 
 
@@ -789,28 +833,34 @@ const AddRecord: React.FC<AddRecordProps> = ({
         </motion.div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex-1 flex flex-col p-4 space-y-4 overflow-y-auto">
+      <form onSubmit={handleSubmit} className="flex-1 flex flex-col p-4 space-y-3 overflow-y-auto">
 
         {/* Compact Layout */}
         <motion.div
-          className="flex flex-col space-y-4"
+          className="flex flex-col space-y-3"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
         >
 
           {/* Row 1: Circle & Date (Secondary Info) */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             {/* Circle Selector - Compact */}
             <div className="flex-1 min-w-0">
-              <label className={`text-xs ${textSecondary} mb-2 block pl-1 uppercase tracking-wider`}>圈子</label>
+              <label className={`text-xs ${textSecondary} mb-1.5 block pl-1 uppercase tracking-wider`}>圈子</label>
               <div className="flex overflow-x-auto no-scrollbar pb-1 -mx-1 px-1 space-x-2">
                 {circles.map((c, index) => (
                   <motion.button
                     key={c.id}
                     type="button"
-                    onClick={() => setCircleId(c.id)}
-                    className={`px-4 py-2 rounded-xl text-xs whitespace-nowrap border transition-all font-medium ${circleId === c.id
+                    onPointerDown={(e) => handleCirclePointerDown(e, c.id)}
+                    onMouseDown={(e) => handleCirclePointerDown(e, c.id)}
+                    onTouchStart={(e) => handleCirclePointerDown(e, c.id)}
+                    onClick={(e) => {
+                      if ((e as any).defaultPrevented) return;
+                      handleCircleSelect(c.id);
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs whitespace-nowrap border transition-all font-medium ${circleId === c.id
                       ? 'bg-luxury-gold-500/20 border-luxury-gold-500 text-luxury-gold-500 shadow-[0_0_20px_rgba(212,175,55,0.3)]'
                       : `${inputBg} ${borderClass} ${textSecondary} hover:border-luxury-gold-500/30`
                       }`}
@@ -828,12 +878,12 @@ const AddRecord: React.FC<AddRecordProps> = ({
 
             {/* Date Picker - Compact */}
             <div className="flex-none">
-              <label className={`text-xs ${textSecondary} mb-2 block pl-1 uppercase tracking-wider`}>日期</label>
+              <label className={`text-xs ${textSecondary} mb-1.5 block pl-1 uppercase tracking-wider`}>日期</label>
               <motion.input
                 type="date"
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className={`py-2 px-4 ${inputBg} rounded-xl ${borderClass} text-xs text-center font-medium outline-none focus:border-luxury-gold-500/50 focus:shadow-[0_0_20px_rgba(212,175,55,0.2)] transition-all ${textPrimary}`}
+                onChange={(e) => handleDateChange(e.target.value)}
+                className={`py-1.5 px-3 ${inputBg} rounded-lg ${borderClass} text-xs text-center font-medium outline-none focus:border-luxury-gold-500/50 focus:shadow-[0_0_20px_rgba(212,175,55,0.2)] transition-all ${textPrimary}`}
                 whileFocus={{ scale: 1.02 }}
               />
             </div>
@@ -841,20 +891,20 @@ const AddRecord: React.FC<AddRecordProps> = ({
 
           {/* Row 2: Win/Loss & Amount (Primary Input) */}
           <motion.div
-            className="flex items-stretch space-x-3"
+            className="flex items-stretch space-x-2.5"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
             {/* Win/Loss Switch - Pill Shape */}
-            <div className={`flex flex-col flex-none justify-center ${inputBg} rounded-2xl p-1.5 w-24 border ${borderClass}`}>
+            <div className={`flex flex-col flex-none justify-center ${inputBg} rounded-xl p-1 w-20 border ${borderClass}`}>
               <motion.button
                 type="button"
                 onClick={() => {
                   setIsWin(true);
                   amountInputRef.current?.focus();
                 }}
-                className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all mb-1 ${isWin
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all mb-1 ${isWin
                   ? 'bg-win-crimson text-white shadow-[0_0_20px_rgba(220,20,60,0.4)]'
                   : `${textSecondary} hover:text-win-crimson/70`
                   }`}
@@ -869,7 +919,7 @@ const AddRecord: React.FC<AddRecordProps> = ({
                   setIsWin(false);
                   amountInputRef.current?.focus();
                 }}
-                className={`flex-1 py-2 text-sm font-bold rounded-xl transition-all ${!isWin
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${!isWin
                   ? 'bg-loss-emerald text-white shadow-[0_0_20px_rgba(0,200,83,0.4)]'
                   : `${textSecondary} hover:text-loss-emerald/70`
                   }`}
@@ -880,65 +930,77 @@ const AddRecord: React.FC<AddRecordProps> = ({
               </motion.button>
             </div>
 
-            {/* Amount Input - Prominent */}
-            <div className="flex-1 relative group">
-              <span
-                className={`absolute left-5 top-1/2 -translate-y-1/2 text-3xl font-bold font-mono-numeric transition-colors ${isWin ? 'text-win-crimson drop-shadow-[0_0_15px_rgba(220,20,60,0.5)]' : 'text-loss-emerald drop-shadow-[0_0_15px_rgba(0,200,83,0.5)]'
-                  }`}
+            {/* Amount + Note (Side-by-side) */}
+            <div className="flex-1 flex items-stretch gap-2">
+              <div
+                className={`relative transition-all duration-200 ${isNoteExpanded ? 'flex-[1.6]' : 'flex-[2.4]'}`}
               >
-                ¥
-              </span>
-              <motion.input
-                ref={amountInputRef}
-                type="text"
-                inputMode="decimal"
-                placeholder="0.00"
-                value={amount}
-                onChange={handleAmountChange}
-                className={`w-full h-full text-right pr-5 py-4 pl-14 ${inputBg} rounded-2xl text-5xl font-bold outline-none border-2 transition-all font-mono-numeric ${error
-                  ? 'border-rose-500/50 text-rose-500'
-                  : `${borderClass} focus:${isWin ? 'border-win-crimson' : 'border-loss-emerald'}/50 focus:shadow-[0_0_30px_rgba(${isWin ? '220,20,60' : '0,200,83'},0.2)] ${isWin ? 'text-win-crimson' : 'text-loss-emerald'}`
-                  } ${textPrimary} placeholder:text-slate-300`}
-                autoFocus={!initialRecord}
-                whileFocus={{ scale: 1.01 }}
-              />
+                <span
+                  className={`absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold font-mono-numeric transition-colors ${isWin ? 'text-win-crimson drop-shadow-[0_0_15px_rgba(220,20,60,0.5)]' : 'text-loss-emerald drop-shadow-[0_0_15px_rgba(0,200,83,0.5)]'
+                    }`}
+                >
+                  ¥
+                </span>
+                <motion.input
+                  ref={amountInputRef}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={handleAmountChange}
+                  className={`w-full h-full text-right pr-4 py-3 pl-12 ${inputBg} rounded-xl text-4xl font-bold outline-none border-2 transition-all font-mono-numeric ${error
+                    ? 'border-rose-500/50 text-rose-500'
+                    : `${borderClass} focus:${isWin ? 'border-win-crimson' : 'border-loss-emerald'}/50 focus:shadow-[0_0_30px_rgba(${isWin ? '220,20,60' : '0,200,83'},0.2)] ${isWin ? 'text-win-crimson' : 'text-loss-emerald'}`
+                    } ${textPrimary} placeholder:text-slate-300`}
+                  autoFocus={!initialRecord}
+                  whileFocus={{ scale: 1.01 }}
+                />
+              </div>
+
+              <div
+                className={`relative transition-all duration-200 ${isNoteExpanded ? 'flex-[1.2]' : 'flex-[1]'} min-w-[92px]`}
+              >
+                <div className={`absolute left-3 top-1/2 -translate-y-1/2 ${textSecondary}`}>
+                  <FileText className="w-4 h-4" />
+                </div>
+                <motion.input
+                  type="text"
+                  placeholder="备注"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  onFocus={() => setIsNoteExpanded(true)}
+                  onBlur={() => setIsNoteExpanded(false)}
+                  maxLength={20}
+                  className={`w-full h-full py-3 pl-10 pr-9 ${inputBg} rounded-xl ${borderClass} text-sm outline-none focus:border-luxury-gold-500/50 focus:shadow-[0_0_20px_rgba(212,175,55,0.15)] transition-all ${textPrimary} placeholder:text-slate-400`}
+                  whileFocus={{ scale: 1.01 }}
+                />
+                <motion.button
+                  type="button"
+                  onClick={() => {
+                    setIsNoteExpanded(true);
+                    setImportMode('voice');
+                    setShowImportModal(true);
+                    toggleListening();
+                  }}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full ${textSecondary} hover:text-luxury-gold-500 hover:bg-luxury-gold-500/10 transition-colors`}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <Mic size={16} />
+                </motion.button>
+              </div>
             </div>
           </motion.div>
 
-          {/* Row 3: Note */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <div className="relative">
-              <div className={`absolute left-4 top-1/2 -translate-y-1/2 ${textSecondary}`}>
-                <FileText className="w-5 h-5" />
-              </div>
-              <motion.input
-                type="text"
-                placeholder="备注 (选填)"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                maxLength={20}
-                className={`w-full py-4 pl-12 pr-12 ${inputBg} rounded-xl ${borderClass} text-sm outline-none focus:border-luxury-gold-500/50 focus:shadow-[0_0_20px_rgba(212,175,55,0.15)] transition-all ${textPrimary} placeholder:text-slate-400`}
-                whileFocus={{ scale: 1.01 }}
-              />
-              <motion.button
-                type="button"
-                onClick={() => {
-                  setImportMode('voice');
-                  setShowImportModal(true);
-                  toggleListening();
-                }}
-                className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full ${textSecondary} hover:text-luxury-gold-500 hover:bg-luxury-gold-500/10 transition-colors`}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Mic size={20} />
-              </motion.button>
-            </div>
-          </motion.div>
+          {error && (
+            <motion.div
+              className="text-xs text-rose-500 px-1"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {error}
+            </motion.div>
+          )}
 
         </motion.div>
 
@@ -956,7 +1018,7 @@ const AddRecord: React.FC<AddRecordProps> = ({
       >
         <motion.button
           onClick={(e) => handleSubmit(e as any)}
-          className={`w-full font-bold py-4 rounded-2xl shadow-lg flex items-center justify-center transition-all ${isWin
+          className={`w-full font-bold py-3.5 rounded-2xl shadow-lg flex items-center justify-center transition-all ${isWin
             ? 'bg-win-crimson text-white shadow-[0_0_30px_rgba(220,20,60,0.4)] hover:shadow-[0_0_40px_rgba(220,20,60,0.5)]'
             : 'bg-loss-emerald text-white shadow-[0_0_30px_rgba(0,200,83,0.4)] hover:shadow-[0_0_40px_rgba(0,200,83,0.5)]'
             }`}

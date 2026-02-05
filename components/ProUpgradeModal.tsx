@@ -33,6 +33,20 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
         getCountdown(Date.now(), LANTERN_FESTIVAL_END_UTC)
     );
     const [showDeadline, setShowDeadline] = React.useState(false);
+    const [showCelebration, setShowCelebration] = React.useState(false);
+    const celebrationTimerRef = React.useRef<number | null>(null);
+    const confettiPieces = React.useMemo(
+        () =>
+            Array.from({ length: 18 }, (_, index) => ({
+                id: index,
+                left: `${(index * 7 + 12) % 100}%`,
+                delay: index * 0.06,
+                size: 6 + (index % 4) * 3,
+                duration: 1.3 + (index % 3) * 0.25,
+                rotate: (index * 37) % 360
+            })),
+        []
+    );
 
     React.useEffect(() => {
         if (!isOpen) return;
@@ -42,11 +56,28 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
         return () => window.clearInterval(timer);
     }, [isOpen]);
 
+    React.useEffect(() => {
+        if (isOpen) return;
+        setShowCelebration(false);
+        if (celebrationTimerRef.current) {
+            window.clearTimeout(celebrationTimerRef.current);
+            celebrationTimerRef.current = null;
+        }
+    }, [isOpen]);
+
     const handlePurchase = async () => {
         if (loading) return;
         try {
-            await purchase();
-            onClose();
+            const success = await purchase();
+            if (!success) return;
+            if (celebrationTimerRef.current) {
+                window.clearTimeout(celebrationTimerRef.current);
+            }
+            setShowCelebration(true);
+            celebrationTimerRef.current = window.setTimeout(() => {
+                setShowCelebration(false);
+                onClose();
+            }, 2200);
         } catch (e) {
             // Error handling is inside context
         }
@@ -59,6 +90,15 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
         } catch (e) {
             // Error handling is inside context
         }
+    };
+
+    const handleCelebrationDone = () => {
+        if (celebrationTimerRef.current) {
+            window.clearTimeout(celebrationTimerRef.current);
+            celebrationTimerRef.current = null;
+        }
+        setShowCelebration(false);
+        onClose();
     };
 
     const benefits = [
@@ -101,12 +141,14 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
                     className="fixed inset-0 z-[100] bg-slate-900 overflow-y-auto"
                 >
                     {/* Close Button */}
-                    <button
-                        onClick={onClose}
-                        className="absolute top-12 right-6 z-20 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors"
-                    >
-                        <X size={20} />
-                    </button>
+                    {!showCelebration && (
+                        <button
+                            onClick={onClose}
+                            className="absolute top-12 right-6 z-20 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-white/70 hover:bg-white/20 transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+                    )}
 
                     {/* Background Effects */}
                     <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -116,6 +158,92 @@ const ProUpgradeModal: React.FC<ProUpgradeModalProps> = ({ isOpen, onClose }) =>
                         <div className="absolute top-[40%] right-[20%] w-1.5 h-1.5 rounded-full bg-amber-200 animate-pulse delay-700" />
                         <div className="absolute top-[15%] right-[30%] w-1 h-1 rounded-full bg-white animate-pulse delay-300" />
                     </div>
+
+                    <AnimatePresence>
+                        {showCelebration && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="fixed inset-0 z-[120] flex items-center justify-center"
+                            >
+                                <div className="absolute inset-0 bg-slate-950/90" />
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,191,36,0.35),_rgba(15,23,42,0.9)_55%)]"
+                                />
+                                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ duration: 0.6 }}
+                                        className="absolute -top-24 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full border border-amber-300/20 blur-[1px]"
+                                    />
+                                    <motion.div
+                                        animate={{ rotate: 360 }}
+                                        transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
+                                        className="absolute -top-28 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full border border-amber-400/10 border-dashed"
+                                    />
+                                    {confettiPieces.map((piece) => (
+                                        <motion.span
+                                            key={piece.id}
+                                            initial={{ y: -40, opacity: 0, rotate: 0 }}
+                                            animate={{ y: 240, opacity: [0, 1, 0], rotate: piece.rotate }}
+                                            transition={{ duration: piece.duration, delay: piece.delay, ease: 'easeOut' }}
+                                            className="absolute top-6 rounded-full bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 shadow-[0_0_12px_rgba(251,191,36,0.45)]"
+                                            style={{
+                                                left: piece.left,
+                                                width: `${piece.size}px`,
+                                                height: `${piece.size * 1.6}px`
+                                            }}
+                                        />
+                                    ))}
+                                </div>
+
+                                <motion.div
+                                    initial={{ scale: 0.85, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    transition={{ type: 'spring', stiffness: 180, damping: 18 }}
+                                    className="relative z-10 w-full max-w-[360px] px-6 text-center"
+                                >
+                                    <motion.div
+                                        initial={{ scale: 0.6, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        transition={{ delay: 0.1, type: 'spring', stiffness: 220, damping: 18 }}
+                                        className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gold-gradient shadow-gold-glow"
+                                    >
+                                        <Crown className="h-11 w-11 text-slate-900 drop-shadow" strokeWidth={1.6} />
+                                    </motion.div>
+                                    <motion.h2
+                                        initial={{ y: 12, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        transition={{ delay: 0.2 }}
+                                        className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-yellow-200 to-amber-100 bg-[length:200%_100%] animate-gold-shimmer"
+                                    >
+                                        恭喜升级 Pro 会员
+                                    </motion.h2>
+                                    <motion.p
+                                        initial={{ y: 12, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        transition={{ delay: 0.3 }}
+                                        className="mt-2 text-sm text-amber-100/70"
+                                    >
+                                        尊贵权益已解锁，尽享奢华金体验
+                                    </motion.p>
+                                    <motion.button
+                                        initial={{ y: 12, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        transition={{ delay: 0.4 }}
+                                        onClick={handleCelebrationDone}
+                                        className="mt-6 w-full rounded-2xl bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600 py-3 text-sm font-bold text-slate-900 shadow-[0_0_30px_rgba(251,191,36,0.35)]"
+                                    >
+                                        立即体验
+                                    </motion.button>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     <div className="relative z-10 flex flex-col min-h-full pb-safe">
                         <div className="w-full max-w-[420px] mx-auto px-6">

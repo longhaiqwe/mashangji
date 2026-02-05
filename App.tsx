@@ -278,6 +278,18 @@ const App: React.FC = () => {
 
     const newRecords = Array.isArray(recordOrRecords) ? recordOrRecords : [recordOrRecords];
     const originalRecords = [...records];
+    const resolveNextSelectedCircle = () => {
+      if (selectedCircleId === 'all') return 'all';
+      if (newRecords.length === 1) {
+        return newRecords[0]?.circleId || selectedCircleId;
+      }
+      const uniqueCircleIds = new Set(newRecords.map(r => r.circleId).filter(Boolean));
+      if (uniqueCircleIds.size === 1) {
+        return Array.from(uniqueCircleIds)[0] as string;
+      }
+      return 'all';
+    };
+    const nextSelectedCircleId = resolveNextSelectedCircle();
 
     // Check if it's an update or new (assuming batch is always new for now, but safe to check)
     // Actually, batch import from AI will always be new records with new IDs.
@@ -300,6 +312,9 @@ const App: React.FC = () => {
       updatedRecords.sort((a, b) => b.timestamp - a.timestamp);
 
       setRecords(updatedRecords);
+      if (nextSelectedCircleId !== selectedCircleId) {
+        setSelectedCircleId(nextSelectedCircleId);
+      }
       changeView(ViewState.DASHBOARD);
 
       // Persist to DB
