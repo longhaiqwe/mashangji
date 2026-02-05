@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { Platform } from 'react-native'; // Note: React Native types might not be available in strict Vite app, but Capacitor usually mimics web behavior. 
+
 // Actually we are in a web/capacitor app, so we use capacitor plugins directly.
 import { Purchases, PurchasesPackage, CustomerInfo, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
 import { Capacitor } from '@capacitor/core';
@@ -12,6 +12,8 @@ interface SubscriptionContextType {
     purchase: () => Promise<boolean>;
     restore: () => Promise<void>;
     priceString: string;
+    login: (userId: string) => Promise<void>;
+    logout: () => Promise<void>;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
@@ -98,6 +100,30 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const login = async (userId: string) => {
+        if (!Capacitor.isNativePlatform()) return;
+        try {
+            const { customerInfo } = await Purchases.logIn({ appUserID: userId });
+            setCustomerInfo(customerInfo);
+            checkProStatus(customerInfo);
+            console.log("RevenueCat login success:", userId);
+        } catch (e) {
+            console.error("RevenueCat login error:", e);
+        }
+    };
+
+    const logout = async () => {
+        if (!Capacitor.isNativePlatform()) return;
+        try {
+            const { customerInfo } = await Purchases.logOut();
+            setCustomerInfo(customerInfo);
+            checkProStatus(customerInfo);
+            console.log("RevenueCat logout success");
+        } catch (e) {
+            console.error("RevenueCat logout error:", e);
+        }
+    };
+
     const purchase = async () => {
         if (!currentOffering) {
             alert('暂时无法获取商品信息，请稍后再试');
@@ -137,7 +163,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
     const priceString = currentOffering?.product.priceString || '¥98.00';
 
     return (
-        <SubscriptionContext.Provider value={{ isPro, currentOffering, customerInfo, loading, purchase, restore, priceString }}>
+        <SubscriptionContext.Provider value={{ isPro, currentOffering, customerInfo, loading, purchase, restore, priceString, login, logout }}>
             {children}
         </SubscriptionContext.Provider>
     );

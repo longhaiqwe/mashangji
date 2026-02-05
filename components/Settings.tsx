@@ -439,7 +439,7 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
                 <UserCircle className={`w-7 h-7 ${userIconColor}`} />
               </div>
               {isPro && (
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-700 shadow-gold-glow-sm ring-2 ring-white/70 flex items-center justify-center">
+                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-700 shadow-gold-glow-sm ring-2 ring-white/70 flex items-center justify-center">
                   <Crown className="w-3 h-3 text-slate-900" strokeWidth={2.2} />
                 </div>
               )}
@@ -464,30 +464,45 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
           </div>
         </Card>
 
-        {/* Pro Upgrade Banner */}
-        <button
-          onClick={() => setShowProModal(true)}
-          className="w-full relative overflow-hidden group rounded-2xl"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 opacity-90 transition-opacity group-hover:opacity-100" />
-          <div className="relative p-4 flex items-center justify-between">
+        {/* Pro Upgrade Banner / Status Card */}
+        {!isPro ? (
+          <button
+            onClick={() => setShowProModal(true)}
+            className="w-full relative overflow-hidden group rounded-2xl"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 opacity-90 transition-opacity group-hover:opacity-100" />
+            <div className="relative p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                  <span className="text-white text-xs font-black tracking-widest">PRO</span>
+                </div>
+                <div className="text-left">
+                  <h3 className="text-white font-bold text-base flex items-center gap-1">
+                    开通 Pro 会员
+                    <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white font-normal backdrop-blur-sm">SALE</span>
+                  </h3>
+                  <p className="text-amber-100 text-xs">解锁无限语音记账 & 专属标识</p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-white/70 group-hover:text-white transition-colors" />
+            </div>
+            {/* Shine effect */}
+            <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent z-10" />
+          </button>
+        ) : (
+          <Card variant={menuCardVariant} className="p-4 flex items-center justify-between border border-luxury-gold-500/20 bg-gradient-to-r from-luxury-gold-500/10 via-transparent to-transparent">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                <span className="text-white text-xs font-black tracking-widest">PRO</span>
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-700 shadow-gold-glow-sm flex items-center justify-center">
+                <Crown className="w-5 h-5 text-slate-900" strokeWidth={1.8} />
               </div>
               <div className="text-left">
-                <h3 className="text-white font-bold text-base flex items-center gap-1">
-                  开通 Pro 会员
-                  <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white font-normal backdrop-blur-sm">SALE</span>
-                </h3>
-                <p className="text-amber-100 text-xs">解锁无限语音记账 & 专属标识</p>
+                <h3 className={`font-bold text-base ${textPrimary}`}>Pro 会员已开通</h3>
+                <p className={`text-xs ${textSecondary}`}>尊贵权益已生效，尽享奢华金体验</p>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-white/70 group-hover:text-white transition-colors" />
-          </div>
-          {/* Shine effect */}
-          <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent z-10" />
-        </button>
+            <span className="text-[10px] font-semibold text-luxury-gold-500/80">尊贵会员</span>
+          </Card>
+        )}
 
         {/* Menu Items */}
         <div className="space-y-2">

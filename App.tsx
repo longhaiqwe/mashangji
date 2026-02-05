@@ -21,6 +21,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useParticleEffect } from './components/ui/ParticleEffect';
 import { useVoiceTrial } from './hooks/useVoiceTrial';
 import TrialExhaustedModal from './components/TrialExhaustedModal';
+import { useSubscription } from './context/SubscriptionContext';
 
 
 
@@ -248,6 +249,20 @@ const App: React.FC = () => {
     }
   }, [user?.id]); // Only reload if user ID changes
 
+  // Subscription Hook
+  const subscription = useSubscription();
+
+  // 监听用户变动，同步 RevenueCat 身份
+  useEffect(() => {
+    if (user?.id) {
+      subscription.login(user.id);
+    } else {
+      // 注意：这里不要盲目调用 logout，因为 App 初始化时 user 可能为 null 但其实不需要退出（可能是刚打开 App）。
+      // 只有明确登出操作才调用 logout，或者依赖 handleLogout。
+      // 考虑到 RevenueCat 的 identity 是持久化的，我们主要确保“登录时绑定”和“登出时解绑”。
+    }
+  }, [user?.id]); // 仅当 user ID 变化时尝试同步
+
   // Auth Handlers
   const handleLoginSuccess = (loggedInUser: User) => {
     // Rely on onAuthStateChange to set the user and trigger data loading
@@ -256,6 +271,10 @@ const App: React.FC = () => {
     // The useEffect [user?.id] dependency prevents duplicate data fetching.
     setIsLoading(true);
     setUser(loggedInUser);
+
+    // 同步 RevenueCat 身份
+    subscription.login(loggedInUser.id);
+
     changeView(ViewState.DASHBOARD);
   };
 
@@ -263,6 +282,9 @@ const App: React.FC = () => {
     // Fire-and-forget: Don't wait for server signOut to complete
     // This ensures instant UI response. Server token revocation happens in background.
     authService.logout();
+
+    // Reset RevenueCat Identity
+    subscription.logout();
 
     // Immediately clear local state for fast UI transition
     setUser(null);
