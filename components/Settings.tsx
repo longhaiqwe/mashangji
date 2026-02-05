@@ -40,6 +40,13 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
   const headerBg = isDarkTheme ? 'bg-dark-bg-secondary/70 border-luxury-gold-500/10' : 'bg-white/80 border-slate-200';
   const cardVariant = isDarkTheme ? 'glass' : 'light';
   const menuCardVariant = isDarkTheme ? 'default' : 'light';
+  const userCardVariant = isPro ? 'gold' : 'light';
+  const userCardTextPrimary = !isPro && isDarkTheme ? 'text-slate-800' : textPrimary;
+  const userCardTextSecondary = !isPro && isDarkTheme ? 'text-slate-500' : textSecondary;
+  const userCardEditHover = !isPro ? 'hover:bg-slate-100' : (isDarkTheme ? 'hover:bg-white/10' : 'hover:bg-slate-100');
+  const proStatusTextPrimary = isDarkTheme ? 'text-slate-800' : textPrimary;
+  const proStatusTextSecondary = isDarkTheme ? 'text-slate-500' : textSecondary;
+  const proStatusBadgeText = isDarkTheme ? 'text-amber-700' : 'text-luxury-gold-500/80';
   const sectionTitle = isDarkTheme ? 'text-luxury-gold-500/70' : 'text-slate-400';
 
   // Icon Containers
@@ -464,47 +471,49 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
 
         <div className="px-4 py-5 space-y-5 overflow-y-auto safe-top safe-bottom">
           {/* User Profile Card */}
-          <Card variant={cardVariant} className="p-4 flex items-center">
-            <div className="flex items-center space-x-4">
-              <div className="relative flex-shrink-0">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${userIconBg}`}>
-                  <UserCircle className={`w-7 h-7 ${userIconColor}`} />
-                </div>
-                {isPro && (
-                  <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-700 shadow-gold-glow-sm ring-2 ring-white/70 flex items-center justify-center">
-                    <Crown className="w-3 h-3 text-slate-900" strokeWidth={2.2} />
+          <Card variant={userCardVariant} className="p-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 flex-1 min-w-0 overflow-hidden">
+                <div className="relative flex-shrink-0">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${userIconBg}`}>
+                    <UserCircle className={`w-7 h-7 ${userIconColor}`} />
                   </div>
-                )}
-              </div>
-
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className={`font-bold text-lg tracking-wide truncate ${textPrimary} max-w-[150px]`}>
-                    {displayUsername}
-                  </h3>
-                  <button
-                    onClick={() => setIsEditModalOpen(true)}
-                    className={`p-1 rounded-full transition-opacity opacity-60 hover:opacity-100 ${isDarkTheme ? 'hover:bg-white/10' : 'hover:bg-slate-100'}`}
-                    title="修改昵称"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
-                    </svg>
-                  </button>
+                  {isPro && (
+                    <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-700 shadow-gold-glow-sm ring-2 ring-white/70 flex items-center justify-center">
+                      <Crown className="w-3 h-3 text-slate-900" strokeWidth={2.2} />
+                    </div>
+                  )}
                 </div>
-                <p className={`text-xs ${textSecondary} mt-0.5`}>已登录</p>
-              </div>
-            </div>
 
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleLogout}
-              icon={<LogOut className="w-3 h-3" />}
-              className="!rounded-lg !px-3 !py-1 text-[10px] h-7 flex-shrink-0 ml-4"
-            >
-              退出
-            </Button>
+                <div className="flex flex-col min-w-0 overflow-hidden">
+                  <div className="flex items-center gap-2">
+                    <h3 className={`font-bold text-lg tracking-wide truncate ${userCardTextPrimary}`}>
+                      {displayUsername}
+                    </h3>
+                    <button
+                      onClick={() => setIsEditModalOpen(true)}
+                      className={`p-1 rounded-full transition-opacity opacity-60 hover:opacity-100 ${userCardEditHover} ${userCardTextSecondary}`}
+                      title="修改昵称"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                      </svg>
+                    </button>
+                  </div>
+                  <p className={`text-xs ${userCardTextSecondary} mt-0.5 truncate`}>已登录</p>
+                </div>
+              </div>
+
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={handleLogout}
+                icon={<LogOut className="w-3 h-3" />}
+                className="flex-shrink-0 !rounded-lg !px-3 !py-1 text-[10px] h-7 whitespace-nowrap !w-auto"
+              >
+                退出
+              </Button>
+            </div>
           </Card>
 
           {/* Pro Upgrade Banner / Status Card */}
@@ -533,17 +542,17 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
               <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent z-10" />
             </button>
           ) : (
-            <Card variant={menuCardVariant} className="p-4 flex items-center justify-between border border-luxury-gold-500/20 bg-gradient-to-r from-luxury-gold-500/10 via-transparent to-transparent">
+            <Card variant="light" className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-700 shadow-gold-glow-sm flex items-center justify-center">
                   <Crown className="w-5 h-5 text-slate-900" strokeWidth={1.8} />
                 </div>
                 <div className="text-left">
-                  <h3 className={`font-bold text-base ${textPrimary}`}>Pro 会员已开通</h3>
-                  <p className={`text-xs ${textSecondary}`}>尊贵权益已生效，尽享奢华金体验</p>
+                  <h3 className={`font-bold text-base ${proStatusTextPrimary}`}>Pro 会员已开通</h3>
+                  <p className={`text-xs ${proStatusTextSecondary}`}>尊贵权益已生效，尽享奢华金体验</p>
                 </div>
               </div>
-              <span className="text-[10px] font-semibold text-luxury-gold-500/80">尊贵会员</span>
+              <span className={`text-[10px] font-semibold ${proStatusBadgeText}`}>尊贵会员</span>
             </Card>
           )}
 
