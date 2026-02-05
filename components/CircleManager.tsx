@@ -342,7 +342,7 @@ const CircleManager: React.FC<CircleManagerProps> = ({
           <>
             {menuState.source === 'touch' ? (
               <div
-                className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm"
+                className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm pb-[calc(env(safe-area-inset-bottom)+68px)]"
                 onClick={() => setMenuState(null)}
               >
                 <div
