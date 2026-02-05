@@ -3,6 +3,7 @@ import { ViewState, User, Record, Circle } from '../types';
 import { Users, ChevronRight, Info, LogOut, UserCircle, Trash2, FileDown, FileUp, MessageSquare, Shield, AlertTriangle, Loader2, Crown } from 'lucide-react';
 import { authService } from '../services/authService';
 import ProUpgradeModal from './ProUpgradeModal';
+import EditProfileModal from './EditProfileModal';
 import { fetchRecords, fetchCircles, addRecordsBatch, syncCircles, generateId } from '../services/storageService';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
@@ -415,6 +416,37 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
     }
   };
 
+  // Pro Upgrade Logic
+  const handleUpgradeSuccess = () => {
+    setShowProModal(false);
+    onDataRefresh?.(true);
+  };
+
+  // --- Profile Edit Logic ---
+  const [isEditModalOpen, setIsEditModalOpen] = React.useState(false);
+  // Add local display state for immediate UI feedback without waiting for parent/server sync
+  const [displayUsername, setDisplayUsername] = React.useState(user?.username || '用户');
+
+  // Sync local display when prop updates (e.g. initial load or remote change)
+  React.useEffect(() => {
+    if (user?.username) {
+      setDisplayUsername(user.username);
+    }
+  }, [user?.username]);
+
+  const handleUpdateProfileSuccess = async (newUsername: string) => {
+    // 1. Call API
+    await authService.updateProfile({ username: newUsername });
+
+    // 2. Update Local Display IMMEDIATELY (Optimistic update)
+    setDisplayUsername(newUsername);
+
+    // 3. Trigger parent refresh to sync everything else
+    if (onDataRefresh) onDataRefresh(true);
+
+    // 4. Success feedback (optional, modal closes automatically)
+  };
+
   return (
     <div className={`flex flex-col h-full ${bgClass} ${textPrimary} relative overflow-hidden`}>
       {/* Ambient background glow */}
@@ -422,197 +454,216 @@ const Settings: React.FC<SettingsProps> = ({ onNavigate, user, onLogout, onClear
       <div className={`absolute -bottom-28 -left-16 w-72 h-72 rounded-full blur-3xl ${isDarkTheme ? 'bg-win-crimson/10' : 'bg-rose-200/40'}`} />
 
       <div className="relative z-10 flex flex-col h-full">
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleImport}
-        accept=".txt"
-        className="hidden"
-      />
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleImport}
+          accept=".txt"
+          className="hidden"
+        />
 
-      <div className="px-4 py-5 space-y-5 overflow-y-auto safe-top safe-bottom">
-        {/* User Profile Card */}
-        <Card variant={cardVariant} className="p-4 flex items-center">
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${userIconBg}`}>
-                <UserCircle className={`w-7 h-7 ${userIconColor}`} />
-              </div>
-              {isPro && (
-                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-700 shadow-gold-glow-sm ring-2 ring-white/70 flex items-center justify-center">
-                  <Crown className="w-3 h-3 text-slate-900" strokeWidth={2.2} />
+        <div className="px-4 py-5 space-y-5 overflow-y-auto safe-top safe-bottom">
+          {/* User Profile Card */}
+          <Card variant={cardVariant} className="p-4 flex items-center justify-between">
+            <div className="flex items-center space-x-4 flex-1">
+              <div className="relative flex-shrink-0">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${userIconBg}`}>
+                  <UserCircle className={`w-7 h-7 ${userIconColor}`} />
                 </div>
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-3">
-                <h3 className={`font-bold text-lg tracking-wide ${textPrimary}`}>
-                  {user?.username || '用户'}
-                </h3>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={handleLogout}
-                  icon={<LogOut className="w-3 h-3" />}
-                  className="!rounded-lg !px-3 !py-0.5 text-[10px] h-6"
-                >
-                  退出
-                </Button>
+                {isPro && (
+                  <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-700 shadow-gold-glow-sm ring-2 ring-white/70 flex items-center justify-center">
+                    <Crown className="w-3 h-3 text-slate-900" strokeWidth={2.2} />
+                  </div>
+                )}
               </div>
-              <p className={`text-xs ${textSecondary}`}>已登录</p>
-            </div>
-          </div>
-        </Card>
 
-        {/* Pro Upgrade Banner / Status Card */}
-        {!isPro ? (
-          <button
-            onClick={() => setShowProModal(true)}
-            className="w-full relative overflow-hidden group rounded-2xl"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 opacity-90 transition-opacity group-hover:opacity-100" />
-            <div className="relative p-4 flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className={`font-bold text-lg tracking-wide truncate ${textPrimary} max-w-[150px]`}>
+                    {displayUsername}
+                  </h3>
+                  <button
+                    onClick={() => setIsEditModalOpen(true)}
+                    className={`p-1 rounded-full transition-opacity opacity-60 hover:opacity-100 ${isDarkTheme ? 'hover:bg-white/10' : 'hover:bg-slate-100'}`}
+                    title="修改昵称"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                    </svg>
+                  </button>
+                </div>
+                <p className={`text-xs ${textSecondary} mt-0.5`}>已登录</p>
+              </div>
+            </div>
+
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleLogout}
+              icon={<LogOut className="w-3 h-3" />}
+              className="!rounded-lg !px-3 !py-1 text-[10px] h-7 flex-shrink-0 ml-6"
+            >
+              退出
+            </Button>
+          </Card>
+
+          {/* Pro Upgrade Banner / Status Card */}
+          {!isPro ? (
+            <button
+              onClick={() => setShowProModal(true)}
+              className="w-full relative overflow-hidden group rounded-2xl"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 opacity-90 transition-opacity group-hover:opacity-100" />
+              <div className="relative p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                    <span className="text-white text-xs font-black tracking-widest">PRO</span>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-white font-bold text-base flex items-center gap-1">
+                      开通 Pro 会员
+                      <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white font-normal backdrop-blur-sm">SALE</span>
+                    </h3>
+                    <p className="text-amber-100 text-xs">解锁无限语音记账 & 专属标识</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-white/70 group-hover:text-white transition-colors" />
+              </div>
+              {/* Shine effect */}
+              <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent z-10" />
+            </button>
+          ) : (
+            <Card variant={menuCardVariant} className="p-4 flex items-center justify-between border border-luxury-gold-500/20 bg-gradient-to-r from-luxury-gold-500/10 via-transparent to-transparent">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                  <span className="text-white text-xs font-black tracking-widest">PRO</span>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-700 shadow-gold-glow-sm flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-slate-900" strokeWidth={1.8} />
                 </div>
                 <div className="text-left">
-                  <h3 className="text-white font-bold text-base flex items-center gap-1">
-                    开通 Pro 会员
-                    <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white font-normal backdrop-blur-sm">SALE</span>
-                  </h3>
-                  <p className="text-amber-100 text-xs">解锁无限语音记账 & 专属标识</p>
+                  <h3 className={`font-bold text-base ${textPrimary}`}>Pro 会员已开通</h3>
+                  <p className={`text-xs ${textSecondary}`}>尊贵权益已生效，尽享奢华金体验</p>
                 </div>
               </div>
-              <ChevronRight className="w-5 h-5 text-white/70 group-hover:text-white transition-colors" />
-            </div>
-            {/* Shine effect */}
-            <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent z-10" />
-          </button>
-        ) : (
-          <Card variant={menuCardVariant} className="p-4 flex items-center justify-between border border-luxury-gold-500/20 bg-gradient-to-r from-luxury-gold-500/10 via-transparent to-transparent">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-200 via-amber-400 to-amber-700 shadow-gold-glow-sm flex items-center justify-center">
-                <Crown className="w-5 h-5 text-slate-900" strokeWidth={1.8} />
-              </div>
-              <div className="text-left">
-                <h3 className={`font-bold text-base ${textPrimary}`}>Pro 会员已开通</h3>
-                <p className={`text-xs ${textSecondary}`}>尊贵权益已生效，尽享奢华金体验</p>
-              </div>
-            </div>
-            <span className="text-[10px] font-semibold text-luxury-gold-500/80">尊贵会员</span>
-          </Card>
-        )}
+              <span className="text-[10px] font-semibold text-luxury-gold-500/80">尊贵会员</span>
+            </Card>
+          )}
 
-        {/* Menu Items */}
-        <div className="space-y-2">
-          <h3 className={`text-xs font-bold uppercase tracking-widest px-1 ${sectionTitle}`}>
-            通用设置
-          </h3>
-          <Card variant={menuCardVariant} className={`!p-0 overflow-hidden divide-y ${isDarkTheme ? 'divide-white/5' : 'divide-slate-100'}`}>
-            {menuItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={item.onClick}
-                  className={`w-full flex items-center justify-between p-4 ${menuItemHover} transition-colors group`}
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${menuItemIconBg}`}>
-                      <Icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          {/* Menu Items */}
+          <div className="space-y-2">
+            <h3 className={`text-xs font-bold uppercase tracking-widest px-1 ${sectionTitle}`}>
+              通用设置
+            </h3>
+            <Card variant={menuCardVariant} className={`!p-0 overflow-hidden divide-y ${isDarkTheme ? 'divide-white/5' : 'divide-slate-100'}`}>
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={item.onClick}
+                    className={`w-full flex items-center justify-between p-4 ${menuItemHover} transition-colors group`}
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${menuItemIconBg}`}>
+                        <Icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                      </div>
+                      <div className="text-left">
+                        <div className={`text-sm font-bold ${textPrimary}`}>{item.label}</div>
+                        <div className={`text-xs ${textSecondary} mt-0.5`}>{item.desc}</div>
+                      </div>
                     </div>
-                    <div className="text-left">
-                      <div className={`text-sm font-bold ${textPrimary}`}>{item.label}</div>
-                      <div className={`text-xs ${textSecondary} mt-0.5`}>{item.desc}</div>
-                    </div>
-                  </div>
-                  <ChevronRight className={`w-5 h-5 ${isDarkTheme ? 'text-gray-600 group-hover:text-luxury-gold-500/50' : 'text-slate-300 group-hover:text-slate-500'} transition-colors`} />
-                </button>
-              );
-            })}
-          </Card>
-        </div>
-
-        {/* Backup Section */}
-        <div className="space-y-2">
-          <h3 className={`text-xs font-bold uppercase tracking-widest px-1 ${sectionTitle}`}>
-            数据管理
-          </h3>
-          <Card variant={menuCardVariant} className={`!p-0 overflow-hidden divide-y ${isDarkTheme ? 'divide-white/5' : 'divide-slate-100'}`}>
-            {backupItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={item.onClick}
-                  disabled={item.disabled}
-                  className={`w-full flex items-center justify-between p-4 ${menuItemHover} transition-colors group ${item.disabled ? 'opacity-70 cursor-not-allowed' : ''}`}
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${backupItemIconBg}`}>
-                      <Icon className={`w-5 h-5 ${item.id === 'export' && isExporting ? 'animate-spin' : 'group-hover:scale-110 transition-transform'}`} />
-                    </div>
-                    <div className="text-left">
-                      <div className={`text-sm font-bold ${textPrimary}`}>{item.label}</div>
-                      <div className={`text-xs ${textSecondary} mt-0.5`}>{item.desc}</div>
-                    </div>
-                  </div>
-                  {!item.disabled && (
                     <ChevronRight className={`w-5 h-5 ${isDarkTheme ? 'text-gray-600 group-hover:text-luxury-gold-500/50' : 'text-slate-300 group-hover:text-slate-500'} transition-colors`} />
-                  )}
-                </button>
-              );
-            })}
+                  </button>
+                );
+              })}
+            </Card>
+          </div>
+
+          {/* Backup Section */}
+          <div className="space-y-2">
+            <h3 className={`text-xs font-bold uppercase tracking-widest px-1 ${sectionTitle}`}>
+              数据管理
+            </h3>
+            <Card variant={menuCardVariant} className={`!p-0 overflow-hidden divide-y ${isDarkTheme ? 'divide-white/5' : 'divide-slate-100'}`}>
+              {backupItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={item.onClick}
+                    disabled={item.disabled}
+                    className={`w-full flex items-center justify-between p-4 ${menuItemHover} transition-colors group ${item.disabled ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${backupItemIconBg}`}>
+                        <Icon className={`w-5 h-5 ${item.id === 'export' && isExporting ? 'animate-spin' : 'group-hover:scale-110 transition-transform'}`} />
+                      </div>
+                      <div className="text-left">
+                        <div className={`text-sm font-bold ${textPrimary}`}>{item.label}</div>
+                        <div className={`text-xs ${textSecondary} mt-0.5`}>{item.desc}</div>
+                      </div>
+                    </div>
+                    {!item.disabled && (
+                      <ChevronRight className={`w-5 h-5 ${isDarkTheme ? 'text-gray-600 group-hover:text-luxury-gold-500/50' : 'text-slate-300 group-hover:text-slate-500'} transition-colors`} />
+                    )}
+                  </button>
+                );
+              })}
+            </Card>
+          </div>
+
+          {/* About Section */}
+          <Card variant={isDarkTheme ? "glass" : "light"} className={`p-4 flex items-start space-x-3 ${isDarkTheme ? 'bg-white/5' : ''}`}>
+            <Info className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDarkTheme ? 'text-luxury-gold-500' : 'text-slate-400'}`} />
+            <div>
+              <h3 className={`text-sm font-bold mb-1 ${textPrimary}`}>关于麻上记</h3>
+              <p className={`text-xs leading-relaxed ${textSecondary}`}>
+                一款极简的个人麻将记账工具。数据存储于云端并按账号隔离，保障隐私。
+                <br />
+                <span className={`font-mono mt-1 inline-block ${isDarkTheme ? 'text-luxury-gold-500/50' : 'text-slate-400/70'}`}>Version 1.1.1</span>
+              </p>
+            </div>
           </Card>
-        </div>
 
-        {/* About Section */}
-        <Card variant={isDarkTheme ? "glass" : "light"} className={`p-4 flex items-start space-x-3 ${isDarkTheme ? 'bg-white/5' : ''}`}>
-          <Info className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isDarkTheme ? 'text-luxury-gold-500' : 'text-slate-400'}`} />
-          <div>
-            <h3 className={`text-sm font-bold mb-1 ${textPrimary}`}>关于麻上记</h3>
-            <p className={`text-xs leading-relaxed ${textSecondary}`}>
-              一款极简的个人麻将记账工具。数据存储于云端并按账号隔离，保障隐私。
-              <br />
-              <span className={`font-mono mt-1 inline-block ${isDarkTheme ? 'text-luxury-gold-500/50' : 'text-slate-400/70'}`}>Version 1.1.1</span>
-            </p>
-          </div>
-        </Card>
+          {/* Danger Zone */}
+          <div className="pt-4 pb-8 space-y-3">
+            <div className="flex gap-3">
+              <Button
+                onClick={handleClearAllRecords}
+                variant="secondary"
+                icon={<Trash2 className="w-4 h-4" />}
+                className={`flex-1 !text-sm whitespace-nowrap !px-2 ${isDarkTheme ? '!bg-orange-500/10 !text-orange-500 !border-orange-500/20 hover:!bg-orange-500/20' : '!bg-orange-50 !text-orange-600 !border-orange-200 hover:!bg-orange-100'}`}
+              >
+                清空记录
+              </Button>
 
-        {/* Danger Zone */}
-        <div className="pt-4 pb-8 space-y-3">
-          <div className="flex gap-3">
-            <Button
-              onClick={handleClearAllRecords}
-              variant="secondary"
-              icon={<Trash2 className="w-4 h-4" />}
-              className={`flex-1 !text-sm whitespace-nowrap !px-2 ${isDarkTheme ? '!bg-orange-500/10 !text-orange-500 !border-orange-500/20 hover:!bg-orange-500/20' : '!bg-orange-50 !text-orange-600 !border-orange-200 hover:!bg-orange-100'}`}
-            >
-              清空记录
-            </Button>
-
-            <Button
-              onClick={handleDeleteAccount}
-              variant="secondary"
-              icon={<AlertTriangle className="w-4 h-4" />}
-              className={`flex-1 !text-sm whitespace-nowrap !px-2 ${isDarkTheme ? '!bg-red-500/10 !text-red-500 !border-red-500/20 hover:!bg-red-500/20' : '!bg-red-50 !text-red-600 !border-red-200 hover:!bg-red-100'}`}
-            >
-              注销账号
-            </Button>
-          </div>
-          <div className={`${isDarkTheme ? 'bg-red-500/5 border-red-500/10' : 'bg-red-50 border-red-100'} rounded-xl p-3 border`}>
-            <p className={`text-[10px] text-center ${isDarkTheme ? 'text-red-400/80' : 'text-slate-500'}`}>
-              注销账号将永久删除所有数据，且不可恢复。
-            </p>
+              <Button
+                onClick={handleDeleteAccount}
+                variant="secondary"
+                icon={<AlertTriangle className="w-4 h-4" />}
+                className={`flex-1 !text-sm whitespace-nowrap !px-2 ${isDarkTheme ? '!bg-red-500/10 !text-red-500 !border-red-500/20 hover:!bg-red-500/20' : '!bg-red-50 !text-red-600 !border-red-200 hover:!bg-red-100'}`}
+              >
+                注销账号
+              </Button>
+            </div>
+            <div className={`${isDarkTheme ? 'bg-red-500/5 border-red-500/10' : 'bg-red-50 border-red-100'} rounded-xl p-3 border`}>
+              <p className={`text-[10px] text-center ${isDarkTheme ? 'text-red-400/80' : 'text-slate-500'}`}>
+                注销账号将永久删除所有数据，且不可恢复。
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <ProUpgradeModal
-        isOpen={showProModal}
-        onClose={() => setShowProModal(false)}
-      />
+        <ProUpgradeModal
+          isOpen={showProModal}
+          onClose={() => setShowProModal(false)}
+        />
+
+        <EditProfileModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          currentUsername={displayUsername}
+          onSave={handleUpdateProfileSuccess}
+          themeId={themeId}
+        />
       </div>
     </div>
   );

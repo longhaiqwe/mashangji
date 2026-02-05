@@ -150,7 +150,56 @@ export const authService = {
         }
         if (!data.user) throw new Error("Apple 登录失败，未返回用户信息");
 
-        return mapSupabaseUser(data.user);
+        // Apple 只在首次授权时提供用户名，必须立即保存到 user_metadata
+        // 否则后续 token 刷新时名字会丢失
+        const givenName = result.response.givenName;
+        const familyName = result.response.familyName;
+        let userToReturn = data.user;
+
+        if (givenName || familyName) {
+          const fullName = [givenName, familyName].filter(Boolean).join(' ');
+          console.log('[AuthService] Saving Apple user name to metadata:', fullName);
+          try {
+            const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+              data: {
+                full_name: fullName,
+                given_name: givenName,
+                family_name: familyName,
+              }
+            });
+
+            if (updateError) {
+              console.warn('[AuthService] Failed to update user metadata:', updateError);
+              // 即使 updateUser 失败，也手动添加名字到本地 user 对象
+              userToReturn = {
+                ...data.user,
+                user_metadata: {
+                  ...data.user.user_metadata,
+                  full_name: fullName,
+                  given_name: givenName,
+                  family_name: familyName,
+                }
+              };
+            } else if (updateData?.user) {
+              console.log('[AuthService] User metadata updated successfully');
+              userToReturn = updateData.user;
+            }
+          } catch (updateError) {
+            console.warn('[AuthService] Exception saving user name:', updateError);
+            // 手动添加名字到本地 user 对象
+            userToReturn = {
+              ...data.user,
+              user_metadata: {
+                ...data.user.user_metadata,
+                full_name: fullName,
+                given_name: givenName,
+                family_name: familyName,
+              }
+            };
+          }
+        }
+
+        return mapSupabaseUser(userToReturn);
       } else {
         throw new Error("Apple 登录未返回有效 Token");
       }
@@ -240,7 +289,6 @@ export const authService = {
       console.log('[AuthService] Data deleted. Attempting to delete Auth user via RPC...');
 
       // 2. Try to delete the Auth user via RPC
-      // The updated SQL function returns the deleted user ID as a string
       const { data: rpcData, error: rpcError } = await supabase.rpc('delete_user');
 
       if (rpcError) {
@@ -260,6 +308,125 @@ export const authService = {
       console.error('[AuthService] Delete account error:', error);
       throw new Error("注销账号失败，请重试或联系客服");
     }
+  },
+
+  // Update user profile
+  updateProfile: async (updates: { username?: string; avatar_url?: string }): Promise<User> => {
+    // Helper to perform the actual update call
+    const performUpdate = async () => {
+      const data: any = {};
+      if (updates.username) {
+        data.username = updates.username;
+        data.full_name = updates.username; // Sync all name fields
+        data.name = updates.username;
+        data.preferred_username = updates.username;
+      }
+      if (updates.avatar_url) {
+        data.avatar_url = updates.avatar_url;
+      }
+      return await supabase.auth.updateUser({ data });
+    };
+
+    const persistLocally = (userId: string, username: string) => {
+      try {
+        const key = `custom_profile_${userId}`;
+        const existing = JSON.parse(localStorage.getItem(key) || '{}');
+        const updated = { ...existing, username, updatedAt: Date.now() };
+        localStorage.setItem(key, JSON.stringify(updated));
+        console.log('[AuthService] User profile saved locally as fallback');
+      } catch (e) {
+        console.warn('[AuthService] Failed to save local profile:', e);
+      }
+    };
+
+    const attemptUpdate = async (retryCount = 0): Promise<User> => {
+      let currentSession = null;
+      try {
+        const { data } = await supabase.auth.getSession();
+        currentSession = data.session;
+      } catch (e) { }
+
+      // If no session locally, we can't do much
+      if (!currentSession?.user) throw new Error('未登录，无法修改资料');
+
+      try {
+        // 1. Ensure session is fresh before writing
+        if (retryCount === 0) {
+          const { error: sessionError } = await supabase.auth.getSession();
+          if (sessionError) console.warn('[AuthService] Pre-update session check failed:', sessionError);
+        }
+
+        // 2. Perform Update
+        const { data: userData, error } = await performUpdate();
+
+        if (error) {
+          console.error(`[AuthService] Update profile error (attempt ${retryCount + 1}):`, error);
+
+          // Check for retryable error
+          const isRetryable =
+            error.name === 'AuthRetryableFetchError' ||
+            (error as any).isRetryable ||
+            error.status === 0 ||
+            error.message.includes('fetch') ||
+            error.message.includes('Load failed');
+
+          if (isRetryable && retryCount < 2) { // Reduce retries to 2 for faster fallback
+            console.log(`[AuthService] Update profile failed with retryable error. Retrying (${retryCount + 1}/2)...`);
+            await new Promise(resolve => setTimeout(resolve, 800));
+            return attemptUpdate(retryCount + 1);
+          }
+
+          // If we reached here, cloud update failed definitively.
+          // FALLBACK: Save locally
+          if (updates.username) {
+            console.log('[AuthService] Cloud update failed, falling back to local storage');
+            persistLocally(currentSession.user.id, updates.username);
+
+            // Construct a "fake" successful user object
+            const localUser = mapSupabaseUser(currentSession.user);
+            localUser.username = updates.username;
+            return localUser;
+          }
+
+          throw new Error(mapSupabaseError(error.message));
+        }
+
+        if (!userData.user) {
+          throw new Error('更新失败，未返回用户信息');
+        }
+
+        // 3. Success! Also update local fallback cache to keep it in sync
+        if (updates.username) {
+          persistLocally(userData.user.id, updates.username);
+        }
+
+        return mapSupabaseUser(userData.user);
+
+      } catch (error: any) {
+        // Catch network exceptions
+        const isRetryable = error.message?.includes('fetch') || error.name === 'AuthRetryableFetchError';
+
+        if (isRetryable && retryCount < 2) {
+          console.log(`[AuthService] Update profile exception. Retrying (${retryCount + 1}/2)...`);
+          await new Promise(resolve => setTimeout(resolve, 800));
+          return attemptUpdate(retryCount + 1);
+        }
+
+        // FALLBACK on Exception
+        if (updates.username && currentSession?.user) {
+          console.log('[AuthService] Exception caught, falling back to local storage');
+          persistLocally(currentSession.user.id, updates.username);
+          const localUser = mapSupabaseUser(currentSession.user);
+          localUser.username = updates.username;
+          return localUser;
+        }
+
+        console.error('[AuthService] Update profile exception:', error);
+        throw error;
+      }
+    };
+
+    return attemptUpdate();
   }
 };
 
@@ -267,7 +434,19 @@ export const authService = {
 const mapSupabaseUser = (sbUser: any): User => {
   const metadata = sbUser.user_metadata || {};
   // Prioritize Apple ID's 'full_name' or 'name', then explicit 'username', then 'preferred_username'
-  const displayName = metadata.full_name || metadata.name || metadata.username || metadata.preferred_username;
+  let displayName = metadata.full_name || metadata.name || metadata.username || metadata.preferred_username;
+
+  // CHECK LOCAL OVERRIDE
+  if (typeof window !== 'undefined' && window.localStorage && sbUser.id) {
+    try {
+      const localData = JSON.parse(localStorage.getItem(`custom_profile_${sbUser.id}`) || 'null');
+      if (localData && localData.username) {
+        displayName = localData.username;
+      }
+    } catch (e) {
+      // ignore json parse error
+    }
+  }
 
   return {
     id: sbUser.id,

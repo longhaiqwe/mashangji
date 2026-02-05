@@ -160,17 +160,39 @@ const App: React.FC = () => {
       if (!mounted) return;
 
       if (event === 'SIGNED_IN' && session?.user) {
-        // ... (existing logic)
-        try {
-          // We might already have user from initAuth, but this ensures safe updates
-          // If it's the initial event, it might double-fire with initAuth, but React handles state dedup.
-          const appUser = await authService.getCurrentUser();
-          if (mounted) {
-            setUser(appUser);
-            setView(current => current === ViewState.LOGIN ? ViewState.DASHBOARD : current);
-            // Ensure loading is off if we just signed in
-            setIsLoading(false);
+        // Token 刷新场景：如果本地已有相同 user ID，不需要重新获取用户信息
+        // 这避免了 Apple 用户名丢失的问题（Apple 只在首次授权时提供名字）
+        // 使用 React ref 或直接检查当前 user 状态
+        const currentUserId = session.user.id;
+
+        // 使用函数式更新来安全地检查当前状态
+        setUser(prevUser => {
+          if (prevUser && prevUser.id === currentUserId) {
+            // 本地已有相同用户，这是 token 刷新，不需要覆盖
+            console.log('[App] Token refresh detected, keeping existing user state');
+            return prevUser;
           }
+
+          // 新登录或用户切换，需要获取完整用户信息
+          // 由于 setUser 是同步的，我们需要在外部处理异步逻辑
+          return prevUser; // 暂时返回旧值，在外部处理
+        });
+
+        // 检查是否需要获取新用户信息（异步处理）
+        // 这里使用一个小技巧：通过 Promise 来获取当前 user 状态
+        try {
+          const appUser = await authService.getCurrentUser();
+          if (mounted && appUser) {
+            setUser(prevUser => {
+              // 再次检查：如果已经有相同用户，不覆盖
+              if (prevUser && prevUser.id === appUser.id && prevUser.username !== '用户') {
+                return prevUser;
+              }
+              return appUser;
+            });
+            setView(current => current === ViewState.LOGIN ? ViewState.DASHBOARD : current);
+          }
+          setIsLoading(false);
         } catch (e) {
           console.error("Error fetching user details", e);
           if (mounted) setIsLoading(false);
