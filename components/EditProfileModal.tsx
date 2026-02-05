@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, User, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/Button';
+import { Capacitor } from '@capacitor/core';
+import { Keyboard } from '@capacitor/keyboard';
 
 interface EditProfileModalProps {
     isOpen: boolean;
@@ -21,6 +23,28 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
     const [username, setUsername] = useState(currentUsername);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+    // Keyboard handling
+    useEffect(() => {
+        if (!Capacitor.isNativePlatform()) return;
+
+        const willShow = Keyboard.addListener('keyboardWillShow', info => {
+            setKeyboardHeight(info.keyboardHeight);
+        });
+        const didShow = Keyboard.addListener('keyboardDidShow', info => {
+            setKeyboardHeight(info.keyboardHeight);
+        });
+        const willHide = Keyboard.addListener('keyboardWillHide', () => {
+            setKeyboardHeight(0);
+        });
+
+        return () => {
+            willShow.then(h => h.remove());
+            didShow.then(h => h.remove());
+            willHide.then(h => h.remove());
+        };
+    }, []);
 
     // Sync state when modal opens
     useEffect(() => {
@@ -71,7 +95,12 @@ const EditProfileModal: React.FC<EditProfileModalProps> = ({
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 safe-area-inset-bottom">
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ease-out"
+                    style={{
+                        paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : 'env(safe-area-inset-bottom)'
+                    }}
+                >
                     {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
