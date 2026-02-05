@@ -212,7 +212,7 @@ const App: React.FC = () => {
 
   // Load Data from Supabase
   const refreshData = async (
-    silentOrOptions: boolean | { silent?: boolean; strict?: boolean } = false
+    silentOrOptions: boolean | { silent?: boolean; strict?: boolean; retryCount?: number } = false
   ): Promise<boolean> => {
     const silent = typeof silentOrOptions === 'boolean'
       ? silentOrOptions
@@ -220,9 +220,16 @@ const App: React.FC = () => {
     const strict = typeof silentOrOptions === 'object'
       ? Boolean(silentOrOptions.strict)
       : false;
+    const retryCount = typeof silentOrOptions === 'object'
+      ? (silentOrOptions.retryCount ?? 0)
+      : 0;
+    const maxRetries = 2;
+
     if (!user) return false;
 
-    if (!silent) setIsLoading(true);
+    // 只在初始调用时显示 loading
+    if (!silent && retryCount === 0) setIsLoading(true);
+
     try {
       // 默认启用 throwOnError，确保加载失败时能被捕获
       const [loadedRecords, loadedCircles, loadedPrefs] = await Promise.all([
@@ -235,16 +242,30 @@ const App: React.FC = () => {
       // Ensure circles is never empty to prevent UI issues
       setCircles(loadedCircles.length > 0 ? loadedCircles : DEFAULT_CIRCLES);
       setPreferences(loadedPrefs);
+
+      // 成功时关闭 loading
+      if (!silent && retryCount === 0) setIsLoading(false);
       return true;
     } catch (error) {
       console.error("Failed to sync data", error instanceof Error ? error.message : JSON.stringify(error));
-      // 非静默模式下提示用户，避免用户看到空白页面以为数据丢失
+
+      // 自动重试逻辑
+      if (retryCount < maxRetries) {
+        console.log(`[App] 数据加载失败，正在重试 (${retryCount + 1}/${maxRetries})...`);
+        // 等待2秒后重试
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const result = await refreshData({ silent, strict, retryCount: retryCount + 1 });
+        // 初始调用在重试完成后关闭 loading
+        if (!silent && retryCount === 0) setIsLoading(false);
+        return result;
+      }
+
+      // 重试次数用尽，关闭 loading 并提示用户
       if (!silent) {
-        alert('数据加载失败，请检查网络后下拉刷新重试。您的数据仍安全保存在云端。');
+        setIsLoading(false);
+        alert('网络不稳定，数据加载失败。请检查网络后重新打开 App。您的数据仍安全保存在云端。');
       }
       return false;
-    } finally {
-      if (!silent) setIsLoading(false);
     }
   };
 
