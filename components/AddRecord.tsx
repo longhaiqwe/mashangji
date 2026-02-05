@@ -99,6 +99,13 @@ const AddRecord: React.FC<AddRecordProps> = ({
     }
   }, [initialAutoStartVoice, canUseVoice]);
 
+  // If circles load after mount and no circle is selected yet, pick a sensible default
+  useEffect(() => {
+    if (circleId) return;
+    const defaultCircle = circles.find(c => c.isDefault) || circles[0];
+    if (defaultCircle) setCircleId(defaultCircle.id);
+  }, [circles, circleId]);
+
   const silenceTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const amountInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -551,8 +558,28 @@ const AddRecord: React.FC<AddRecordProps> = ({
     }
   };
 
+  const normalizeDate = (value: string): string | null => {
+    if (!value) return null;
+    const trimmed = value.trim();
+    const parsed = new Date(trimmed);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed.toISOString().split('T')[0];
+  };
+
   const handleBatchImport = () => {
     if (parsedResults.length === 0) return;
+
+    const fallbackCircleId = circles.find(c => c.isDefault)?.id || circles[0]?.id || '';
+    if (!fallbackCircleId) {
+      setFeedback({
+        type: 'error',
+        message: '请先创建圈子后再导入'
+      });
+      return;
+    }
+
+    const todayIso = new Date().toISOString().split('T')[0];
+    let invalidDateCount = 0;
 
     // Use current circleId for all records
     // Or we could try to detect circle from text too, but for now stick to current selected circle
@@ -566,15 +593,23 @@ const AddRecord: React.FC<AddRecordProps> = ({
         }
       }
 
+      const normalizedDate = normalizeDate(res.date);
+      if (!normalizedDate) invalidDateCount += 1;
+      const dateToUse = normalizedDate || todayIso;
+
       return {
         id: generateId(),
-        circleId: targetCircleId,
+        circleId: targetCircleId || fallbackCircleId,
         amount: res.isWin ? Math.abs(res.amount) : -Math.abs(res.amount),
-        date: res.date,
+        date: dateToUse,
         note: res.note,
-        timestamp: new Date(res.date).getTime()
+        timestamp: new Date(dateToUse).getTime()
       };
     });
+
+    if (invalidDateCount > 0) {
+      alert(`有 ${invalidDateCount} 条记录日期无法识别，已按今天保存`);
+    }
 
     onSave(recordsToSave);
     setShowImportModal(false);
@@ -593,6 +628,17 @@ const AddRecord: React.FC<AddRecordProps> = ({
       return;
     }
 
+    if (!circleId) {
+      setError('请先选择圈子');
+      return;
+    }
+
+    const normalizedDate = normalizeDate(date);
+    if (!normalizedDate) {
+      setError('日期格式无效');
+      return;
+    }
+
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount)) {
       setError('金额必须是数字');
@@ -605,7 +651,7 @@ const AddRecord: React.FC<AddRecordProps> = ({
       id: initialRecord ? initialRecord.id : generateId(), // Reuse ID if editing
       circleId,
       amount: finalAmount,
-      date,
+      date: normalizedDate,
       note,
       timestamp: initialRecord ? initialRecord.timestamp : Date.now()
     };

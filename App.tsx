@@ -210,23 +210,33 @@ const App: React.FC = () => {
 
 
   // Load Data from Supabase
-  const refreshData = async (silent = false) => {
-    if (!user) return;
+  const refreshData = async (
+    silentOrOptions: boolean | { silent?: boolean; strict?: boolean } = false
+  ): Promise<boolean> => {
+    const silent = typeof silentOrOptions === 'boolean'
+      ? silentOrOptions
+      : Boolean(silentOrOptions.silent);
+    const strict = typeof silentOrOptions === 'object'
+      ? Boolean(silentOrOptions.strict)
+      : false;
+    if (!user) return false;
 
     if (!silent) setIsLoading(true);
     try {
       const [loadedRecords, loadedCircles, loadedPrefs] = await Promise.all([
-        Storage.fetchRecords(user.id),
-        Storage.fetchCircles(user.id),
-        Storage.fetchPreferences(user.id)
+        Storage.fetchRecords(user.id, { throwOnError: strict }),
+        Storage.fetchCircles(user.id, { throwOnError: strict }),
+        Storage.fetchPreferences(user.id, { throwOnError: strict })
       ]);
 
       setRecords(loadedRecords);
       // Ensure circles is never empty to prevent UI issues
       setCircles(loadedCircles.length > 0 ? loadedCircles : DEFAULT_CIRCLES);
       setPreferences(loadedPrefs);
+      return true;
     } catch (error) {
       console.error("Failed to sync data", error instanceof Error ? error.message : JSON.stringify(error));
+      return false;
     } finally {
       if (!silent) setIsLoading(false);
     }
@@ -305,8 +315,10 @@ const App: React.FC = () => {
         }
       }
 
-      // Batch insert new records
-      if (recordsToAdd.length > 0) {
+      // Insert new records
+      if (recordsToAdd.length === 1) {
+        await Storage.addRecord(recordsToAdd[0], user.id);
+      } else if (recordsToAdd.length > 1) {
         await Storage.addRecordsBatch(recordsToAdd, user.id);
       }
 
@@ -327,9 +339,12 @@ const App: React.FC = () => {
       setEditingRecord(null); // Clear edit state
     } catch (e) {
       console.error(e);
-      alert("保存失败");
-      // Rollback
-      setRecords(originalRecords);
+      alert("保存失败，已尝试重新同步");
+      const synced = await refreshData({ silent: true, strict: true });
+      if (!synced) {
+        // Rollback only if we couldn't reconcile with server
+        setRecords(originalRecords);
+      }
     }
   };
 
@@ -341,8 +356,11 @@ const App: React.FC = () => {
         setRecords(records.filter(r => r.id !== id));
         await Storage.deleteRecord(id, user.id);
       } catch (e) {
-        alert("删除失败");
-        setRecords(originalRecords);
+        alert("删除失败，已尝试重新同步");
+        const synced = await refreshData({ silent: true, strict: true });
+        if (!synced) {
+          setRecords(originalRecords);
+        }
       }
     }
   };

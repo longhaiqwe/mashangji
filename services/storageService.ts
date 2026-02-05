@@ -6,7 +6,7 @@ import { supabase } from './supabase';
 /**
  * Helper to execute DB operations with auto-retry and session refresh
  */
-async function withRetry<T>(operation: () => Promise<T>, retries = 1): Promise<T> {
+async function withRetry<T>(operation: () => Promise<T>, retries = 2): Promise<T> {
   try {
     return await operation();
   } catch (err: any) {
@@ -16,16 +16,23 @@ async function withRetry<T>(operation: () => Promise<T>, retries = 1): Promise<T
       // 403: Forbidden (RLS policy, but sometimes requires refresh)
       // "JWT expired" message
       // Network errors (TypeError: Failed to fetch)
-      const message = err?.message || '';
+      const message = (err?.message || '').toString();
+      const lowerMessage = message.toLowerCase();
+      const code = err?.code;
       const isAuthError =
         err?.status === 401 ||
         err?.status === 403 ||
+        code === 'PGRST301' || // JWT expired
         message.includes('JWT') ||
-        message.includes('jwt');
+        message.includes('jwt') ||
+        lowerMessage.includes('auth session missing') ||
+        lowerMessage.includes('invalid jwt');
       const isNetworkError =
-        message.includes('fetch') ||
-        message.includes('network') ||
-        message.includes('connection');
+        err?.status === 0 ||
+        err?.name === 'AuthRetryableFetchError' ||
+        lowerMessage.includes('fetch') ||
+        lowerMessage.includes('network') ||
+        lowerMessage.includes('connection');
 
       if (isAuthError) {
         console.warn('[Storage] Auth error detected, attempting session refresh...', err);
@@ -54,22 +61,24 @@ async function withRetry<T>(operation: () => Promise<T>, retries = 1): Promise<T
 
 // --- Records ---
 
-export const fetchRecords = async (userId: string): Promise<Record[]> => {
-  return withRetry(async () => {
-    const { data, error } = await supabase
-      .from('records')
-      .select('*')
-      .eq('user_id', userId)
-      .order('timestamp', { ascending: false });
+type FetchOptions = { throwOnError?: boolean };
 
-    if (error) throw error;
-    return data;
-  }).catch(err => {
-    console.error('Error fetching records:', err);
-    return [];
-  }).then(data => {
+export const fetchRecords = async (userId: string, options?: FetchOptions): Promise<Record[]> => {
+  try {
+    const data = await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('records')
+        .select('*')
+        .eq('user_id', userId)
+        .order('timestamp', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    });
+
+    const rows = data || [];
     // Map snake_case DB columns to camelCase TS interface
-    return data.map((item: any) => ({
+    return rows.map((item: any) => ({
       id: item.id,
       circleId: item.circle_id,
       amount: Number(item.amount),
@@ -77,7 +86,11 @@ export const fetchRecords = async (userId: string): Promise<Record[]> => {
       note: item.note,
       timestamp: Number(item.timestamp),
     }));
-  });
+  } catch (err) {
+    console.error('Error fetching records:', err);
+    if (options?.throwOnError) throw err;
+    return [];
+  }
 };
 
 export const addRecord = async (record: Record, userId: string): Promise<Record | null> => {
@@ -208,15 +221,18 @@ export const deleteAllPreferences = async (userId: string): Promise<void> => {
 
 // --- Circles ---
 
-export const fetchCircles = async (userId: string): Promise<Circle[]> => {
-  return withRetry(async () => {
-    const { data, error } = await supabase
-      .from('circles')
-      .select('*')
-      .eq('user_id', userId)
-      .order('sort_order', { ascending: true }); // Sort by order
+export const fetchCircles = async (userId: string, options?: FetchOptions): Promise<Circle[]> => {
+  try {
+    const data = await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('circles')
+        .select('*')
+        .eq('user_id', userId)
+        .order('sort_order', { ascending: true }); // Sort by order
 
-    if (error) throw error;
+      if (error) throw error;
+      return data;
+    });
 
     if (!data || data.length === 0) {
       // Initializing default circles for new user in DB
@@ -235,10 +251,11 @@ export const fetchCircles = async (userId: string): Promise<Circle[]> => {
       isDefault: item.is_default,
       sortOrder: item.sort_order, // Map from DB
     }));
-  }).catch(error => {
+  } catch (error) {
     console.error('Error fetching circles:', error);
+    if (options?.throwOnError) throw error;
     return DEFAULT_CIRCLES;
-  });
+  }
 };
 
 // Sync circles: Upsert current list and delete removed ones
@@ -279,15 +296,18 @@ export const syncCircles = async (circles: Circle[], userId: string): Promise<vo
 
 // --- Preferences ---
 
-export const fetchPreferences = async (userId: string): Promise<UserPreferences> => {
-  return withRetry(async () => {
-    const { data, error } = await supabase
-      .from('user_preferences')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+export const fetchPreferences = async (userId: string, options?: FetchOptions): Promise<UserPreferences> => {
+  try {
+    const data = await withRetry(async () => {
+      const { data, error } = await supabase
+        .from('user_preferences')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    if (error) throw error;
+      if (error) throw error;
+      return data;
+    });
 
     if (!data) return DEFAULT_PREFERENCES;
 
@@ -295,10 +315,11 @@ export const fetchPreferences = async (userId: string): Promise<UserPreferences>
       themeId: data.theme_id as any,
       backgroundImage: data.background_image,
     };
-  }).catch(error => {
-    console.error('Error fetching preferences:', error.message);
+  } catch (error: any) {
+    console.error('Error fetching preferences:', error?.message || error);
+    if (options?.throwOnError) throw error;
     return DEFAULT_PREFERENCES;
-  });
+  }
 };
 
 export const savePreferences = async (prefs: UserPreferences, userId: string): Promise<void> => {
@@ -319,7 +340,10 @@ export const savePreferences = async (prefs: UserPreferences, userId: string): P
 };
 
 export const generateId = (): string => {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
 };
 
 // Legacy local storage functions removed to enforce cloud sync
