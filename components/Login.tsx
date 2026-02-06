@@ -1,9 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dice5, ArrowRight, Lock, User as UserIcon, Mail } from 'lucide-react';
 import { authService } from '../services/authService';
 import { User } from '../types';
 import { Capacitor } from '@capacitor/core';
+import { Keyboard } from '@capacitor/keyboard';
 
 interface LoginProps {
   onLoginSuccess: (user: User) => void;
@@ -17,6 +18,25 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // 监听键盘高度变化
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const willShowListener = Keyboard.addListener('keyboardWillShow', (info) => {
+      setKeyboardHeight(info.keyboardHeight);
+    });
+
+    const willHideListener = Keyboard.addListener('keyboardWillHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      willShowListener.then(handle => handle.remove());
+      willHideListener.then(handle => handle.remove());
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,13 +82,18 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#F2F4F7] relative overflow-hidden transition-colors duration-500">
+    <div
+      className="flex flex-col items-center justify-center min-h-screen bg-[#F2F4F7] relative overflow-hidden transition-all duration-300"
+    >
       {/* Dynamic Background Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-mahjong-400/20 rounded-full blur-[100px] animate-pulse-slow"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] bg-blue-400/10 rounded-full blur-[100px] animate-pulse-slow delay-1000"></div>
 
-      {/* Card Container */}
-      <div className="w-full max-w-md z-10 px-6">
+      {/* Card Container - 键盘弹出时向上移动 */}
+      <div
+        className="w-full max-w-md z-10 px-6 transition-transform duration-300"
+        style={{ transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : 'none' }}
+      >
         <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-2xl shadow-gray-200/50 p-8 md:p-10 border border-white/50 relative overflow-hidden">
 
           {/* Decorative Shine */}
