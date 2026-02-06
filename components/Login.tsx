@@ -137,6 +137,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                       onLoginSuccess(user);
                     }
                   } catch (err: any) {
+                    // 如果是用户取消登录，不显示错误提示
+                    if (err.message === '用户取消登录') return;
                     setError(err.message);
                   }
                 }}

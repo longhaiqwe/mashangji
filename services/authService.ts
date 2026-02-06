@@ -205,7 +205,7 @@ export const authService = {
       }
     } catch (error: any) {
       console.error('[AuthService] Apple Login error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-      if (error?.message?.includes('canceled')) {
+      if (error?.message?.includes('canceled') || error?.message?.includes('1001')) {
         throw new Error('用户取消登录');
       }
       throw new Error("Apple 登录失败: " + (error.message || '未知错误'));
