@@ -19,6 +19,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const inputPadding = isRegistering ? 'py-3.5' : 'py-4';
 
   // 监听键盘高度变化
   useEffect(() => {
@@ -83,7 +84,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   return (
     <div
-      className="flex flex-col items-center justify-center min-h-screen relative overflow-hidden transition-all duration-300 bg-[radial-gradient(1200px_circle_at_15%_10%,rgba(244,228,188,0.7),transparent_45%),radial-gradient(900px_circle_at_85%_0%,rgba(212,175,55,0.25),transparent_40%),linear-gradient(180deg,#FFFDF7_0%,#F7F1E6_100%)]"
+      className="flex flex-col items-center justify-start h-[100dvh] overflow-y-auto overflow-x-hidden touch-pan-y overscroll-x-none relative transition-all duration-300 bg-[radial-gradient(1200px_circle_at_15%_10%,rgba(244,228,188,0.7),transparent_45%),radial-gradient(900px_circle_at_85%_0%,rgba(212,175,55,0.25),transparent_40%),linear-gradient(180deg,#FFFDF7_0%,#F7F1E6_100%)]"
     >
       {/* Dynamic Background Elements */}
       <div className="absolute top-[-12%] left-[-12%] w-[520px] h-[520px] bg-luxury-gold-300/30 rounded-full blur-[120px] animate-pulse-slow"></div>
@@ -94,7 +95,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
       {/* Card Container - 键盘弹出时向上移动 */}
       <div
-        className="w-full max-w-md z-10 px-6 transition-transform duration-300"
+        className="w-full max-w-md z-10 px-6 py-10 transition-transform duration-300"
         style={{ transform: keyboardHeight > 0 ? `translateY(-${keyboardHeight}px)` : 'none' }}
       >
         <div className="bg-[linear-gradient(180deg,rgba(255,255,255,0.95)_0%,rgba(255,249,236,0.92)_100%)] backdrop-blur-xl rounded-[2.75rem] shadow-[0_24px_60px_rgba(120,96,24,0.18)] p-8 md:p-10 border border-luxury-gold-200/60 ring-1 ring-luxury-gold-100/70 relative overflow-hidden font-heading">
@@ -102,6 +103,18 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           {/* Decorative Shine */}
           <div className="absolute top-0 left-0 w-full h-[3px] bg-gold-shimmer opacity-80"></div>
           <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(600px_circle_at_30%_0%,rgba(255,255,255,0.8),transparent_55%)]"></div>
+
+          {isRegistering && (
+            <div className="w-full flex justify-end -mt-2 mb-2">
+              <button
+                type="button"
+                onClick={toggleMode}
+                className="px-3 py-1.5 text-xs font-bold tracking-[0.2em] uppercase text-luxury-gold-700 border border-luxury-gold-200/70 rounded-full bg-white/70 hover:bg-white transition-colors"
+              >
+                返回登录
+              </button>
+            </div>
+          )}
 
           <div className="flex flex-col items-center mb-8">
             <div className="w-20 h-20 bg-gold-gradient rounded-2xl flex items-center justify-center shadow-gold-glow-sm mb-6 transform rotate-3 transition-transform hover:rotate-6 duration-300 group ring-1 ring-luxury-gold-200/70">
@@ -162,7 +175,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="example@email.com"
-                  className="w-full pl-12 pr-4 py-4 bg-[#FFFBF4] border border-luxury-gold-200/70 rounded-2xl text-lg text-slate-900 outline-none focus:bg-white focus:ring-2 focus:ring-luxury-gold-300/40 focus:border-luxury-gold-500 transition-all duration-300"
+                  className={`w-full pl-12 pr-4 ${inputPadding} bg-[#FFFBF4] border border-luxury-gold-200/70 rounded-2xl text-lg text-slate-900 outline-none focus:bg-white focus:ring-2 focus:ring-luxury-gold-300/40 focus:border-luxury-gold-500 transition-all duration-300`}
                 />
               </div>
             </div>
@@ -178,7 +191,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="怎么称呼您"
-                    className="w-full pl-12 pr-4 py-4 bg-[#FFFBF4] border border-luxury-gold-200/70 rounded-2xl text-lg text-slate-900 outline-none focus:bg-white focus:ring-2 focus:ring-luxury-gold-300/40 focus:border-luxury-gold-500 transition-all duration-300"
+                    className={`w-full pl-12 pr-4 ${inputPadding} bg-[#FFFBF4] border border-luxury-gold-200/70 rounded-2xl text-lg text-slate-900 outline-none focus:bg-white focus:ring-2 focus:ring-luxury-gold-300/40 focus:border-luxury-gold-500 transition-all duration-300`}
                   />
                 </div>
               </div>
@@ -194,7 +207,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="请输入密码"
-                  className="w-full pl-12 pr-4 py-4 bg-[#FFFBF4] border border-luxury-gold-200/70 rounded-2xl text-lg text-slate-900 outline-none focus:bg-white focus:ring-2 focus:ring-luxury-gold-300/40 focus:border-luxury-gold-500 transition-all duration-300"
+                  className={`w-full pl-12 pr-4 ${inputPadding} bg-[#FFFBF4] border border-luxury-gold-200/70 rounded-2xl text-lg text-slate-900 outline-none focus:bg-white focus:ring-2 focus:ring-luxury-gold-300/40 focus:border-luxury-gold-500 transition-all duration-300`}
                 />
               </div>
             </div>
@@ -210,7 +223,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="请再次输入密码"
-                    className="w-full pl-12 pr-4 py-4 bg-[#FFFBF4] border border-luxury-gold-200/70 rounded-2xl text-lg text-slate-900 outline-none focus:bg-white focus:ring-2 focus:ring-luxury-gold-300/40 focus:border-luxury-gold-500 transition-all duration-300"
+                    className={`w-full pl-12 pr-4 ${inputPadding} bg-[#FFFBF4] border border-luxury-gold-200/70 rounded-2xl text-lg text-slate-900 outline-none focus:bg-white focus:ring-2 focus:ring-luxury-gold-300/40 focus:border-luxury-gold-500 transition-all duration-300`}
                   />
                 </div>
               </div>
